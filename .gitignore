@@ -1,7 +1,4 @@
-logs/
-.snakemake
-data_/
-data/
+data
 data_old/
 DATA
 FREESURFER/
