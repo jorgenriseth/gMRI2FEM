@@ -17,23 +17,33 @@ SESSIONS=[f"ses-{i+1:02d}" for i in range(5)]
 rule all:
   input:
     expand(
-      "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+      "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
       subject="sub-01",
       session=SESSIONS,
       sequence=["T1w", "T1map_LookLocker"]
     ),
     expand(
-      "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+      "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
       subject="sub-01",
       session="ses-01",
       sequence=["T2w", "FLAIR"]
     ),
     expand(
-      "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_{sequence}_registered.mgz",
+      "data/mri_processed_data/{subject}/registered/{subject}_{session}_{sequence}_registered.mgz",
       subject="sub-01",
       session=SESSIONS,
       sequence=["T1w", "T1map_LookLocker"]
-    )
+    ),
+    # concentrations_LL=expand(
+    #     "mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_LL.mgz",
+    #     subject="sub-01",
+    #     session=SESSIONS,
+    # ),
+    # concentrations_T1w=expand(
+    #     "mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz",
+    #     subject="sub-01",
+    #     session=SESSIONS
+    # )
 
 rule mri_convert:
     input:
@@ -46,7 +56,7 @@ rule mri_convert:
             )
           )
     output:
-        "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz"
+        "data/mri_processed_data/{subject}/conformed/{subject}_{session,[A-Za-z0-9\-]+}_{sequence}_conformed.mgz"
     shell:
         "mri_convert --conform -odt float {input} {output}"
 
@@ -77,8 +87,8 @@ rule registration_T1w:
         image="data/mri_processed_data/{subject}/conformed/{subject}_{session}_T1w_conformed.mgz",
         template="data/mri_processed_data/{subject}/{subject}_T1w_template.mgz"
     output:
-        image = "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_T1w_registered.mgz",
-        lta = "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_T1w_registered.lta"
+        image = "data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.mgz",
+        lta = "data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.lta"
     shell:
         "mri_robust_register"
         " --mov {input.image}"
@@ -90,11 +100,11 @@ rule registration_T1w:
 
 rule registration_bimodal:
     input:
-        image="data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+        image="data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
         template="data/mri_processed_data/{subject}/{subject}_T1w_template.mgz"
     output:
-        image = "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_{sequence}_registered.mgz",
-        lta = "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_{sequence}_registered.lta"
+        image = "data/mri_processed_data/{subject}/registered/{subject}_{session}_{sequence}_registered.mgz",
+        lta = "data/mri_processed_data/{subject}/registered/{subject}_{session}_{sequence}_registered.lta"
     resources:
         time="05:00:00",
     shadow:
