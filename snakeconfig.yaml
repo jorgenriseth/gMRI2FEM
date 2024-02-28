@@ -1,0 +1,7 @@
+datadir: "DATA"
+subjects: ["CTRL_001"]#, "CTRL_002", "CTRL_003", "CTRL_004", "PAT_001", "PAT_002", "PAT_003"]
+FS_subjectsdir: "DATA/freesurfer"
+resolution: [32] #, 64]
+sim_threads: 8
+recon_threads: 1
+shadow: False
