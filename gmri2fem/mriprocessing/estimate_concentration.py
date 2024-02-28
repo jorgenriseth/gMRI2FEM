@@ -21,19 +21,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     reference_volume = nibabel.freesurfer.mghformat.load(args.reference)
-    reference_affine = reference_volume.affine
+    reference_affine = reference_volume.header.get_vox2ras()
     reference_data = reference_volume.get_fdata(dtype=np.float32)
 
-    volume = nibabel.load(args.input)
+    volume = nibabel.freesurfer.mghformat.load(args.input)
     assert np.allclose(
-        reference_affine, volume.affine
+        reference_affine, volume.header.get_vox2ras()
     ), "Affine transformations differ, are you sure the images are registered properly?"
     data = volume.get_fdata(dtype=np.single)
 
     if args.mask is not None:
-        mask = nibabel.load(args.mask)
+        mask = nibabel.freesurfer.mghformat.load(args.mask)
         assert np.allclose(
-            reference_affine, mask.affine
+            reference_affine, mask.header.get_vox2ras()
         ), "Affine transformations differ, are you sure the baseline and T1 Map are registered properly?"
         mask = mask.get_fdata(dtype=np.single).astype(bool)
         reference_data *= mask
