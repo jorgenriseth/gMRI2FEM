@@ -17,20 +17,36 @@ SESSIONS=[f"ses-{i+1:02d}" for i in range(5)]
 rule all:
   input:
     expand(
-      "data/mri_processed_data/sub-01/conformed/sub-01_{session}_{sequence}_conformed.mgz",
-      session=SESSIONS, sequence="T1w")
+      "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+      subject="sub-01",
+      session=SESSIONS,
+      sequence=["T1w", "T1map_LookLocker"]
+    ),
+    expand(
+      "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+      subject="sub-01",
+      session="ses-01",
+      sequence=["T2w", "FLAIR"]
+    ),
+    expand(
+      "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_{sequence}_registered.mgz",
+      subject="sub-01",
+      session=SESSIONS,
+      sequence=["T1w", "T1map_LookLocker"]
+    )
 
 rule mri_convert:
     input:
         lambda wc: (
             "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
-            if ("T1map_LookLocker" in wc.sequence) else
-            "data/mri_dataset/{subject}/{session}/dwi/{subject}_{session}_{sequence}.nii.gz"
-            if ("DTI" in wc.sequence) else
-            "data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
-        )
+            if ("T1map_LookLocker" in wc.sequence) else (
+              "data/mri_dataset/{subject}/{session}/dwi/{subject}_{session}_{sequence}.nii.gz"
+              if ("DTI" in wc.sequence) else
+              "data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
+            )
+          )
     output:
-        "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz"
+        "data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz"
     shell:
         "mri_convert --conform -odt float {input} {output}"
 
@@ -74,7 +90,7 @@ rule registration_T1w:
 
 rule registration_bimodal:
     input:
-        image="data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
+        image="data/mri_processed_data/{subject}/{session}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
         template="data/mri_processed_data/{subject}/{subject}_T1w_template.mgz"
     output:
         image = "data/mri_processed_data/{subject}/{sequence}_registered/{subject}_{session}_{sequence}_registered.mgz",

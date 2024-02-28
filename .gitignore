@@ -6,6 +6,7 @@ GRIP*/
 figures/
 .dropboxignore
 notebooks/
+.snakemake
 
 .vscode
 
