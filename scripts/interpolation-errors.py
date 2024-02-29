@@ -1,11 +1,10 @@
-import argparse
 from pathlib import Path
+from types import SimpleNamespace
 
+import argparse
 # parser = argparse.ArgumentParser()
 # parser.add_argument("--resolution", type=int, required=True)
 # args = parser.parse_args()
-from types import SimpleNamespace
-from typing import Literal, Optional
 
 import matplotlib.cm as mplcmaps
 import matplotlib.colors as mplcolors
@@ -67,8 +66,9 @@ def global_score_error(D_p, D_d, f):
 
 # %% Load MRI-data
 res = args.resolution
-mri_raw_dir = Path("DATA/CTRL_001/CONCENTRATIONS")
-mri_processed_dir = Path(f"DATA/CTRL_001/MODELING/resolution{res}/MRIs")
+
+mri_raw_dir = Path("")
+mri_processed_dir = Path(f"")
 mri_raw_paths = sorted([x for x in mri_raw_dir.glob("*_*.mgz")])
 mri_processed_paths = sorted([x for x in mri_processed_dir.glob("data*.nii.gz")])
 
@@ -294,13 +294,13 @@ def fem_solute_quantities(
     return region_data
 
 
-hdffile = Path(f"DATA/CTRL_001/MODELING/resolution{res}/data.hdf")
+hdffile = Path(f"data/mri_processed_data/subject/MODELING/resolution{res}/data.hdf")
 region_fem_data = fem_solute_quantities(hdffile, SUBDOMAIN_LABELS)
 
 # %% Regionwise
 from gmri2fem.analysis.seg_groups import default_segmentation_groups
 
-asegfile = "DATA/CTRL_001/freesurfer/mri/aseg.mgz"
+asegfile = "data/mri_processed_data/subject/freesurfer/mri/aseg.mgz"
 aseg = nibabel.load(asegfile).get_fdata().astype(int)
 groups = default_segmentation_groups()
 group_masks = {

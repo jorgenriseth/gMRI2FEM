@@ -1,35 +1,18 @@
 import argparse
+import json
 from pathlib import Path
 
+import dolfin as df
 import numpy as np
-
-SUBDOMAIN_LABELS = {
-    "gray-matter": 1,
-    "white-matter": 2,
-}
+import matplotlib.pyplot as plt
+import pantarei as pr
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input", type=Path, required=True)
+parser.add_argument("--output", type=Path, required=True)
+args = parser.parse_args()
 
 
-from dataclasses import dataclass, field
-
-
-@dataclass
-class DummyArgs:
-    input: Path
-    output: Path
-
-
-args = DummyArgs(
-    input=Path("DATA/CTRL_001/MODELING/resolution16/data.hdf"),
-    output=Path("DATA/CTRL_001/MODELING/resolution32/fem_quantities.json"),
-)
-
-import dolfin as df
-import pantarei as pr
-
-# %%
 SUBDOMAIN_LABELS = {
     "gray-matter": 1,
     "white-matter": 2,
@@ -68,9 +51,6 @@ def fem_solute_quantities(
     return timevec, region_data
 
 
-# %%
-import matplotlib.pyplot as plt
-
 time, region_data = fem_solute_quantities(args.input, SUBDOMAIN_LABELS)
 plt.figure()
 for region, data in region_data.items():
@@ -78,7 +58,6 @@ for region, data in region_data.items():
 plt.legend()
 plt.show()
 
-import json
 
 with open(args.output, "w") as f:
     region_data["time"] = list(time)

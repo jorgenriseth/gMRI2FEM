@@ -40,14 +40,15 @@ def participant_record(
     }
     session_dicomdirs = subject_session_dirs(subject_dicomdir)
     assert len(session_dicomdirs) > 0
+    injection_time = datetime.datetime.strptime(
+        subject["injection_time"], "%Y%m%d_%H%M%S"
+    )
     for idx, session in enumerate(session_dicomdirs):
         session_time = session_datetime(session)
-        injection_time = datetime.datetime.strptime(
-            subject["injection_time"], "%Y%m%d_%H%M%S"
-        )
         dt = session_time.date() - injection_time.date()
         participant_record[f"ses-{idx+1:02d}-day"] = str(dt.days)
         participant_record[f"ses-{idx+1:02d}-tod"] = session_time.strftime("%H:%M:%S")
+    participant_record["injection_tod"] = injection_time.strftime("%H:%M:%S")
     return participant_record
 
 
