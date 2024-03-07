@@ -2,53 +2,33 @@ from pathlib import Path
 
 import nibabel
 import numpy as np
-from loguru import logger
-
-from gmri2fem import filters
-
-logger = logging.getLogger(__name__)
 
 
-def normalize_image(
-    image_path: Path, ref_mask: np.ndarray, ref_transform: np.ndarray, output_dir: Path
-) -> Path:
-    image = nibabel.load(image_path)
-    image_affine = image.affine
+def normalize_image(image_path: Path, refroi_path: Path, outputpath: Path) -> Path:
+    image = nibabel.freesurfer.mghformat.load(image_path)
+    refroi = nibabel.freesurfer.mghformat.load(refroi_path)
+
     assert np.allclose(
-        ref_transform, image_affine
+        refroi.affine, image.affine
     ), "Poor match between reference and image-transform."
-    image_data = image.get_fdata()
+    image_data = image.get_fdata(dtype=np.float32)
+    ref_mask = refroi.get_fdata().astype(bool)
 
     normalized_image_data = image_data / np.median(image_data[ref_mask])
-    normalized_image = nibabel.Nifti1Image(normalized_image_data, ref_transform)
+    normalized_image = nibabel.freesurfer.mghformat.MGHImage(
+        normalized_image_data, image.affine
+    )
+    nibabel.freesurfer.mghformat.save(normalized_image, outputpath)
+    return outputpath
 
-    newfile = output_dir / image_path.name
-    nibabel.save(normalized_image, newfile)
-    return newfile
 
+if __name__ == "__main__":
+    import argparse
 
-def normalize_subject_images(subject_dir: Path) -> Path:
-    registered_dir = subject_dir / "REGISTERED"
-    output_dir = subject_dir / "NORMALIZED"
-    refroi_path = subject_dir / "refroi.nii"
-    if not refroi_path.exists():
-        refroi_path = subject_dir / "refroi.mgz"
-        if not refroi_path.exists():
-            raise OSError(
-                (
-                    f"Neither {refroi_path} or {refroi_path.with_suffix('.nii')}"
-                    + "exists. Remember to create referemce ROI using freeview."
-                )
-            )
-    output_dir.mkdir(exist_ok=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", type=Path, required=True)
+    parser.add_argument("--refroi", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
 
-    refroi = nibabel.load(refroi_path)
-    refroi_affine = refroi.affine
-    refroi_mask = refroi.get_fdata().astype(bool)
-
-    images = sorted(filter(filters.is_T1_mgz, registered_dir.iterdir()))
-    for imagepath in images:
-        logger.info("Normalizing image {imagepath}")
-        normalize_image(imagepath, refroi_mask, refroi_affine, output_dir)
-
-    return output_dir
+    normalize_image(args.image, args.refroi, args.output)

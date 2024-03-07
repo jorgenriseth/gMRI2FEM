@@ -66,13 +66,14 @@ if __name__ == "__main__":
 
     domain = hdf2fenics(args.mesh_hdf, pack=True)
     V = df.FunctionSpace(domain, args.femfamily, args.femdegree)
+    concentration_data = sorted(args.mris)
+    timestamps = np.loadtxt(args.timestamps_txt)
 
-    concentration_data = sorted(filter(is_T1_mgz, args.mris))
     assert len(concentration_data) > 0
+    assert len(timestamps) == len(concentration_data)
 
     datafilter = functools.partial(smooth_extension, sigma=0.5, truncate=6)
 
-    timestamps = np.loadtxt(args.timestamps_txt)
     outfile = FenicsStorage(str(args.output_hdf), "w")
     outfile.write_domain(domain)
     for ti, ci in zip(timestamps, concentration_data):
@@ -83,6 +84,7 @@ if __name__ == "__main__":
         )
         outfile.write_checkpoint(c_data_fenics, name="total_concentration", t=ti)
     outfile.close()
+
     fenicsstorage2xdmf(
         outfile.filepath,
         "total_concentration",

@@ -3,11 +3,10 @@ Script to extract the time in seconds since tracer injection in for each subject
 """
 import datetime
 import json
+import pandas as pd
 from pathlib import Path
 
 import numpy as np
-
-from gmri2fem.filters import is_T1_mgz
 
 
 def image_timestamp(p: Path) -> datetime.datetime:
@@ -30,21 +29,31 @@ def timestamps(subject, timestamp_file, t1_files):
     return times
 
 
+def read_timetable(
+    timetable_path: Path, subjectid: str, sequence_label: str
+) -> np.ndarray:
+    print(timetable_path, subjectid, sequence_label)
+    dframe = pd.read_csv(
+        timetable_path,
+        index_col=0,
+    )
+    subject_sequence_entries = (dframe["subject"] == subjectid) & (
+        dframe["SequenceLabel"] == sequence_label
+    )
+    acq_times = dframe[subject_sequence_entries]["acquisition_relative_injection"]
+    return np.array(acq_times)
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--timetable", type=Path, required=True)
     parser.add_argument("--subject", type=str, required=True)
-    parser.add_argument("--injection_times", type=Path, required=True)
-    parser.add_argument("--t1dir", type=Path, required=True)
+    parser.add_argument("--sequence_label", type=str, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    print(list(Path(args.t1dir).iterdir()))
 
-    times = timestamps(
-        args.subject,
-        Path(args.injection_times),
-        sorted(filter(is_T1_mgz, Path(args.t1dir).iterdir())),
-    )
-    print(times)
-    np.savetxt(args.output, times)
+    times = read_timetable(args.timetable, args.subject, args.sequence_label)
+    assert len(times) > 0
+    np.savetxt(args.output, np.maximum(0.0, times))

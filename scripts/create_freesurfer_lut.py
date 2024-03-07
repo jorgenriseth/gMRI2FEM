@@ -32,6 +32,6 @@ if __name__ == "__main__":
 
     df = pd.DataFrame({"lut_index": indices, "description": descriptions})
     df.set_index("lut_index")["description"].to_json(
-        "data/freesurfer_lut.json", indent=4
+        "data/mri_processed_data/freesurfer_lut.json", indent=4
     )
-    df.to_csv("data/freesurfer_lut.csv", index=False)
+    df.to_csv("data/mri_processed_data/freesurfer_lut.csv", index=False)
