@@ -12,38 +12,43 @@ configfile: "snakeconfig.yaml"
 if workflow.run_local:
     workflow._shadow_prefix = os.environ.get("LOCALSCRATCH")
 
-
-SESSIONS=[f"ses-{i+1:02d}" for i in range(5)]
+SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
+print(SESSIONS)
 rule all:
+  input:
+    T1maps_LL = expand(
+        "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_T1map_LL_auto.nii.gz",
+        subject=config["subjects"],
+        session=SESSIONS
+    )
+    # expand(
+    #     "data/mri_processed_data/modeling/resolution{res}/data.hdf",
+    #     subject=config["subjects"],
+    #     res=config["resolution"],
+    #     session=SESSIONS,
+    # )
+
+rule T1map_estimation_from_LL:
+  input:
+    "data/mri_dataset/{subject}/{session}/anat"
+  output:
+    "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_T1map_LL_auto.nii.gz"
+  shell:
+    "python gmri2fem/mriprocessing/looklocker_to_T1map.py"
+    " --inputdir {input}"
+    " --output {output}"
+    " --mask_quantile 0.0"
+
+
+rule mri_convert_all:
   input:
     expand(
       "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
-      subject="sub-01",
+      subject=config["subjects"],
       session=SESSIONS,
-      sequence=["T1w", "T1map_LookLocker"]
-    ),
-    expand(
-      "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
-      subject="sub-01",
-      session="ses-01",
-      sequence=["T2w", "FLAIR"]
-    ),
-    expand(
-      "data/mri_processed_data/{subject}/registered/{subject}_{session}_{sequence}_registered.mgz",
-      subject="sub-01",
-      session=SESSIONS,
-      sequence=["T1w", "T1map_LookLocker"]
-    ),
-    # concentrations_LL=expand(
-    #     "mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_LL.mgz",
-    #     subject="sub-01",
-    #     session=SESSIONS,
-    # ),
-    # concentrations_T1w=expand(
-    #     "mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz",
-    #     subject="sub-01",
-    #     session=SESSIONS
-    # )
+      sequence="T1w"
+    )
+              
 
 rule mri_convert:
     input:
@@ -163,7 +168,7 @@ rule normalize_T1w:
 
 rule T1map_literature:
     input:
-        "freesurfer/{subject}/mri/aseg.mgz"
+        "data/mri_processed_data/freesurfer/{subject}/mri/aseg.mgz"
     output:
         t1map_synth = "data/mri_processed_data/{subject}/t1map_literature.mgz",
         brainmask = "data/mri_processed_data/{subject}/brainmask.mgz"
@@ -205,14 +210,14 @@ rule recon_all_base:
     input:
         t1="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_T1w_conformed.mgz",
     output:
-        protected(directory("freesurfer/{subject}/")),
+        protected(directory("data/mri_processed_data/freesurfer/{subject}/")),
     resources:
         time="24:00:00",
     shadow:
         config["shadow"]
     shell:
         "recon-all"
-        " -sd 'freesurfer'"
+        " -sd 'data/mri_processed_data/freesurfer'"
         " -s {wildcards.subject}"
         " -i {input.t1}"
         " -all"
@@ -257,234 +262,136 @@ rule recon_all_T2w:
         " -T2pial"
         " -all"
 
-#rule extract_times_workflow:
-#    input:
-#        injection="data/injection_times.json",
-#        t1dir="data/{subject}/RESAMPLED",
-#    output:
-#        "data/{subject}/timestamps.txt",
-#    shell:
-#        "python gmri2fem/mriprocessing/extract_timestamps.py"
-#        " --subject {wildcards.subject}"
-#        " --injection_times {input.injection}"
-#        " --t1dir {input.t1dir}"
-#        " --output {output}"
-#
-#
-#rule region_statistics_workflow:
-#    input:
-#        timestamps="data/{subject}/timestamps.txt",
-#        asegfile="data/{subject}/freesurfer/mri/aseg.mgz",
-#        concentrationdir="data/{subject}/CONCENTRATIONS",
-#    output:
-#        "data/{subject}/STATISTICS/lut-regions-stats.csv",
-#    shell:
-#        "python gmri2fem/analysis/region_quantities.py "
-#        " --asegfile {input.asegfile}"
-#        " --timestamps {input.timestamps}"
-#        " --concentrationdir {input.concentrationdir}"
-#        " --lutfile data/freesurfer_lut.json"
-#        " --output {output}"
-#
-#
-#rule region_statistics:
-#    input:
-#        expand(
-#            "data/{subject}/STATISTICS/lut-regions-stats.csv",
-#            subject=config["subjects"],
-#        ),
-#        T1files=[
-#            Path(f"data/{subject}/RESAMPLED/{file.with_suffix('.mgz').name}")
-#            for subject, files in SUBJECT_FILES.items()
-#            for file in files["T1"]
-#        ],
-#        T2file=[
-#            Path(f"data/{subject}/RESAMPLED/T2.mgz") for subject in config["subjects"]
-#        ],
-#
-#
-#rule concentration_estimate_workflow:
-#    input:
-#        image="data/{subjectid}/T1MAPS/{image}",
-#        reference=lambda x: f"data/{x.subjectid}/T1MAPS/{T1_FILES[x.subjectid][0].stem}.mgz",
-#        mask="data/{subjectid}/brainmask.mgz",
-#    output:
-#        "data/{subjectid}/CONCENTRATIONS/{image}"
-#    shell:
-#        "python gmri2fem/mriprocessing/estimate_concentration.py"
-#        " --input {input.image}"
-#        " --reference {input.reference}"
-#        " --output {output}"
-#        # " --mask {input.mask}"
-#
-#rule concentration_estimate:
-#    input:
-#        T1files=[
-#            Path(f"data/{subject}/CONCENTRATIONS/{file.with_suffix('.mgz').name}")
-#            for subject, files in SUBJECT_FILES.items()
-#            for file in files["T1"]
-#        ],
-#
-#
-#rule recon_all_workflow:
-#    input:
-#        t1=lambda x: sorted(Path(f"data/{x.subjectid}/RESAMPLED").iterdir())[0],
-#        t2="data/{subjectid}/RESAMPLED/T2.mgz",
-#        script="mri_recon.py",
-#    output:
-#        protected(directory("data/freesurfer/{subjectid}/")),
-#    threads: config["recon_threads"]
-#    resources:
-#        time="96:00:00",
-#    params:
-#        subjectsdir=config["FS_subjectsdir"],
-#    shadow:
-#        config["shadow"]
-#    shell:
-#        "python {input.script}"
-#        " --subjectid {wildcards.subjectid}"
-#        " --t1file {input.t1}"
-#        " --outputdir {output}"
-#        " --subjectsdir {params.subjectsdir}"
-#        # " -parallel"
-#        # " --t2file {input.t2}"
-#
-#
-#rule symlink_freesurfer_workflow:
-#    input:
-#        "data/freesurfer/{subjectid}",
-#    output:
-#        directory("data/{subjectid}/freesurfer"),
-#    shell:
-#        "ln -s '../../{input}' '{output}'"
-#
-#
-#rule mri_recon_all:
-#    input:
-#        expand("data/{subjectid}/freesurfer", subjectid=config["subjects"]),
-#
-#
-#####################################
-## Converting data to FEniCS-formats.
-#####################################
-#
-#rule mri2fenics:
-#    input:
-#        meshfile="data/{subjectid}/MODELING/resolution{res}/mesh.hdf",
-#        timestamps="data/{subjectid}/timestamps.txt",
-#        concentration_files= lambda wc: [
-#            f"data/{wc.subjectid}/CONCENTRATIONS/{file.with_suffix('.mgz').name}"
-#              for file in T1_FILES[wc.subjectid]
-#        ],
-#    output:
-#        hdf="data/{subjectid}/MODELING/resolution{res}/data.hdf",
-#        visual="data/{subjectid}/MODELING/resolution{res}/visual/data.xdmf",
-#    shell:
-#        "python gmri2fem/mriprocessing/mri2fenics.py"
-#        " --mris {input.concentration_files}"
-#        " --mesh_hdf {input.meshfile}"
-#        " --output_hdf {output.hdf}"
-#        " --timestamps {input.timestamps}"
-#
-#rule mri2fenics_all:
-#    input:
-#        expand(
-#            "data/{subjectid}/MODELING/resolution{res}/data.hdf",
-#            subjectid=config["subjects"],
-#            res=config["resolution"],
-#        ),
-#
-#
-#rule surface_stl_conversion:
-#    input:
-#        "data/{subjectid}/freesurfer/surf/{filename}",
-#    output:
-#        "data/{subjectid}/MODELING/surfaces/{filename}.stl",
-#    shell:
-#        "mris_convert --to-scanner {input} {output}"
-#
-#
-#rule ventricle_extraction:
-#    input:
-#        "data/{subjectid}/freesurfer/mri/wmparc.mgz",
-#    output:
-#        fs="data/{subjectid}/MODELING/surfaces/ventricles",
-#        stl="data/{subjectid}/MODELING/surfaces/ventricles.stl",
-#    shell:
-#        "bash scripts/extract-ventricles.sh {input} {output.fs}"
-#        " && mris_convert --to-scanner {output.fs} {output.stl}"
-#
-#
-#SURFACES = ["lh.pial", "rh.pial", "lh.white", "rh.white", "ventricles"]
-#
-#
-#rule create_surfaces:
-#    input:
-#        expand(
-#            "data/{subjectid}/MODELING/surfaces/{filename}.stl",
-#            filename=SURFACES,
-#            subjectid=config["subjects"],
-#        ),
-#
-#
-#rule create_mesh:
-#    input:
-#        expand(
-#            "data/{{subjectid}}/MODELING/surfaces/{filename}.stl",
-#            filename=SURFACES,
-#        ),
-#    output:
-#        "data/{subjectid}/MODELING/resolution{res}/mesh.hdf",
-#    resources:
-#        time="00:30:00",
-#    shadow:
-#        config["shadow"]
-#    shell:
-#        "python gmri2fem/mriprocessing/mesh_generation.py"
-#        " --surfaces {input}"
-#        " --output {output}"
-#        " --resolution {wildcards.res}"
-#
-#
-############################
-## Simulation postprocessing
-############################
-#rule fenics2mri_workflow:
-#    input:
-#        referenceimage="data/{subjectid}/freesurfer/mri/T1.mgz",
-#        simulationfile="data/{subjectid}/MODELING/resolution{res}/{funcname}.hdf",
-#        timestampfile="data/{subjectid}/timestamps.txt",
-#    output:
-#        "data/{subjectid}/MODELING/resolution{res}/MRIs/{funcname}_{idx}.nii.gz",
-#    shell:
-#        "python gmri2fem/mriprocessing/fenics2mri.py"
-#        " --simulationfile {input.simulationfile}"
-#        " --output {output}"
-#        " --referenceimage {input.referenceimage}"
-#        " --timestamps {input.timestampfile}"
-#        " --timeidx {wildcards.idx}"
-#        " --functionname 'total_concentration'"
-#
-#rule solute_quantification_workflow:
-#    input:
-#        "data/{subjectid}/MODELING/resolution{res}/{funcname}.hdf",
-#    output:
-#        "data/{subjectid}/MODELING/resolution{res}/quantities_{funcname}.csv",
-#    threads: config["sim_threads"]
-#    shadow:
-#        config["shadow"]
-#    shell:
-#        "OMP_NUM_THREADS=1 mpirun -n {threads}"
-#        " python gmri2fem/analysis/solute_quantification.py"
-#        " --input {input} --funcname total_concentration --output {output}"
-#
-#
-#rule fenics2mri_transpose:
-#    input:
-#        expand(
-#            "data/{subjectid}/MODELING/resolution{res}/MRIs/data_{idx}.nii.gz",
-#            subjectid=config["subjects"],
-#            res=config["resolution"],
-#            idx=range(5)
-#        )
-#
+
+rule extract_concentration_times_T1w:
+   input:
+       timetable="data/mri_dataset/derivatives/timetable.csv"
+   output:
+       "data/mri_processed_data/{subject}/timestamps_T1w.txt",
+   shell:
+       "python gmri2fem/mriprocessing/extract_timestamps.py"
+       " --timetable {input}"
+       " --subject {wildcards.subject}"
+       " --sequence_label T1w"
+       " --output {output}"
+
+
+rule extract_concentration_times_LL:
+   input:
+       timetable="data/mri_dataset/derivatives/timetable.csv"
+   output:
+       "data/mri_processed_data/{subject}/timestamps_LL.txt"
+   shell:
+       "python gmri2fem/mriprocessing/extract_timestamps.py"
+       " --timetable {input}"
+       " --subject {wildcards.subject}"
+       " --sequence_label LookLocker"
+       " --output {output}"
+
+rule mri2fenics:
+    input:
+        meshfile="data/mri_processed_data/{subjectid}/modeling/resolution{res}/mesh.hdf",
+        timestamps="data/mri_processed_data/{subjectid}/timestamps_LL.txt",
+        concentrations=expand(
+          "data/mri_processed_data/{{subjectid}}/concentrations/{{subjectid}}_{session}_concentration_LL.mgz",
+          session=SESSIONS
+        )
+    output:
+        hdf="data/mri_processed_data/{subjectid}/modeling/resolution{res}/data.hdf",
+        visual="data/mri_processed_data/{subjectid}/modeling/resolution{res}/visual/data.xdmf",
+    shell:
+        "python gmri2fem/mriprocessing/mri2fenics.py"
+        " --mris {input.concentrations}"
+        " --mesh_hdf {input.meshfile}"
+        " --output_hdf {output.hdf}"
+        " --timestamps {input.timestamps}"
+
+rule surface_stl_conversion:
+    input:
+        "data/mri_processed_data/freesurfer/{subjectid}/surf/{filename}",
+    output:
+        "data/mri_processed_data/{subjectid}/modeling/surfaces/{filename}.stl",
+    shell:
+        "mris_convert --to-scanner {input} {output}"
+
+
+rule ventricle_extraction:
+    input:
+        "data/mri_processed_data/freesurfer/{subjectid}/mri/wmparc.mgz",
+    output:
+        fs="data/mri_processed_data/{subjectid}/modeling/surfaces/ventricles",
+        stl="data/mri_processed_data/{subjectid}/modeling/surfaces/ventricles.stl",
+    shell:
+        "bash scripts/extract-ventricles.sh {input} {output.fs}"
+        " && mris_convert --to-scanner {output.fs} {output.stl}"
+
+
+SURFACES = ["lh.pial", "rh.pial", "lh.white", "rh.white", "ventricles"]
+rule create_surfaces:
+    input:
+        expand(
+            "data/mri_processed_data/{{subjectid}}/modeling/surfaces/{filename}.stl",
+            filename=SURFACES,
+        ),
+
+
+rule create_mesh:
+    input:
+        expand(
+            "data/mri_processed_data/{{subjectid}}/modeling/surfaces/{filename}.stl",
+            filename=SURFACES,
+        ),
+    output:
+        "data/mri_processed_data/{subjectid}/modeling/resolution{res}/mesh.hdf",
+    resources:
+        time="00:30:00",
+    shadow:
+        config["shadow"]
+    shell:
+        "python gmri2fem/mriprocessing/mesh_generation.py"
+        " --surfaces {input}"
+        " --output {output}"
+        " --resolution {wildcards.res}"
+
+
+rule region_statistics_workflow:
+   input:
+       timestamps="data/mri_processed_data/{subject}/timestamps_LL.txt",
+       segfile="data/mri_processed_data/freesurfer/{subject}/mri/aseg.mgz",
+       concentrationdir="data/mri_processed_data/{subject}/concentrations",
+   output:
+       "data/mri_processed_data/{subject}/analysis/lut-regions-stats.csv",
+   shell:
+       "python gmri2fem/analysis/region_quantities.py "
+       " --asegfile {input.asegfile}"
+       " --timestamps {input.timestamps}"
+       " --concentrationdir {input.concentrationdir}"
+       " --lutfile data/mri_processed_data/freesurfer_lut.json"
+       " --output {output}"
+
+
+rule fenics2mri_workflow:
+   input:
+       referenceimage="data/mri_processed_data/freesurfer/{subjectid}/mri/T1.mgz",
+       simulationfile="data/mri_processed_data/{subject}/modelingn/resolution{res}/{funcname}.hdf",
+       timestampfile="data/{subjectid}/timestamps_LL.txt",
+   output:
+       "data/{subjectid}/MODELING/resolution{res}/MRIs/{funcname}_{idx}.nii.gz",
+   shell:
+       "python gmri2fem/mriprocessing/fenics2mri.py"
+       " --simulationfile {input.simulationfile}"
+       " --output {output}"
+       " --referenceimage {input.referenceimage}"
+       " --timestamps {input.timestampfile}"
+       " --timeidx {wildcards.idx}"
+       " --functionname 'total_concentration'"
+
+
+rule fenics2mri_transpose:
+   input:
+       expand(
+           "data/{subjectid}/MODELING/resolution{res}/MRIs/data_{idx}.nii.gz",
+           subjectid=config["subjects"],
+           res=config["resolution"],
+           idx=range(5)
+       )
