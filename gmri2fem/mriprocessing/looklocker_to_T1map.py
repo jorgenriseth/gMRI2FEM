@@ -1,101 +1,135 @@
-import numpy as np
-import scipy
 import re
+import warnings
+import time
+from functools import partial
 from pathlib import Path
-from typing import Callable
-
+from typing import Callable, Any
 
 import nibabel
-import time
+import numpy as np
+import scipy
+import skimage
+import tqdm
 from loguru import logger
+from scipy.optimize import OptimizeWarning
+
+from gmri2fem.utils import nan_filter_gaussian
 
 
-def inversion_recovery_curve(
-    t: np.floating, a: float, b: float, T1: np.floating
-) -> np.floating:
-    return a * (1 - np.exp(-t / T1)) + b
+def f(t, x1, x2, x3):
+    return np.abs(x1 * (1.0 - (1.1 + x2**2) * np.exp(-(x3**2) * t)))
 
 
-def ll_correction(a, b, T1_pre):
-    return (a / (a + b) - 1) * T1_pre
+@np.errstate(divide="raise", invalid="raise", over="raise")
+def curve_fit_wrapper(f, t, y, p0):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", OptimizeWarning)
+        popt, _ = scipy.optimize.curve_fit(f, xdata=t, ydata=y, p0=p0, maxfev=1000)
+    return popt
 
 
-def f(t, a, b, T1):
-    IR = inversion_recovery_curve(t, a, b, T1)
-    y = np.abs(IR)
-    return y
+def fit_voxel(time_s: np.ndarray, pbar, m: np.ndarray) -> np.ndarray:
+    if pbar is not None:
+        pbar.update(1)
+    p0 = np.array((1.0, 1.0, 1.0))
+    if not np.all(np.isfinite(m)):
+        return np.nan * np.zeros_like(p0)
+    try:
+        popt = curve_fit_wrapper(f, time_s, m, p0)
+    except (OptimizeWarning, FloatingPointError):
+        return np.nan * np.zeros_like(p0)
+    except RuntimeError as e:
+        if "maxfev" in str(e):
+            return np.nan * np.zeros_like(p0)
+        raise e
+    return popt
 
 
-def voxel_fitter(t: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
-    def fit_voxel(TI: np.ndarray) -> np.ndarray:
-        amin = max(1, min(TI.argmin(), 11))
-        t_min = (0.25 * t[:-2] + 0.5 * t[1:-1] + 0.25 * t[2:])[amin - 1]
-        w = 1.1
-        a0 = TI[0] + w * TI[-1]
-        b0 = -TI[0] * 0.9
-
-        T10 = (-a0 / b0) * t_min
-        p0 = np.array((a0, b0, T10))
-        try:
-            popt, pcov = scipy.optimize.curve_fit(f, xdata=t, ydata=TI, p0=p0)
-            aopt, bopt, t1opt = popt
-            if t1opt > t[-1] or t1opt < 0 or aopt < 0:
-                return np.nan * np.ones_like(p0)
-        except RuntimeError:
-            return np.nan * np.ones_like(p0)
-        return popt
-
-    return fit_voxel
+def parse_looklocker_path(
+    p: Path, raise_error: bool = True
+) -> tuple[str | Any, ...] | None:
+    pattern = r"sub-(\w+)_ses-(\w+)_LookLocker_t(\d+).nii.gz"
+    m = re.match(pattern, str(p.name))
+    if m is not None:
+        return m.groups()
+    if raise_error:
+        raise ValueError(f"Pattern {pattern} not found in {p}")
+    return None
 
 
-def estimate_t1map(ll_dir: Path, mask_quantile=0.6) -> nibabel.nifti1.Nifti1Image:
-    first_p = next(ll_dir.glob("sub-*_ses-*_LookLocker_t*.nii.gz"))
-    subject_id = re.match(
-        r"(sub-\w+)_ses-\w+_LookLocker_t\d*.nii.gz", first_p.name
-    ).groups()[0]
-    session_id = re.match(
-        r"sub-\w+_(ses-\w+)_LookLocker_t\d*.nii.gz", first_p.name
-    ).groups()[0]
-    t_labels = sorted(
-        [
-            float(
-                re.match("sub-\w+_ses-\w+_LookLocker_t(\d*).nii.gz", p.name).groups()[0]
-            )
-            for p in ll_dir.glob("sub-*_ses-*_LookLocker_t*.nii.gz")
-        ]
-    )
-    assert len(t_labels) > 0
+def estimate_t1map(
+    ll_dir: Path, threshold_number: int = 0
+) -> nibabel.nifti1.Nifti1Image:
+    match_groups = [
+        mgroup
+        for mgroup in map(
+            parse_looklocker_path, ll_dir.glob("sub-*_ses-*_LookLocker_t*.nii.gz")
+        )
+        if mgroup is not None
+    ]
+    sub, ses = match_groups[0][0], match_groups[0][1]
+    t_labels = sorted([float(g[2]) for g in match_groups])
     t_data = np.array(t_labels) / 1000.0
     lls = [
-        ll_dir / f"{subject_id}_{session_id}_LookLocker_t{int(ti)}.nii.gz"
-        for ti in t_labels
+        ll_dir / f"sub-{sub}_ses-{ses}_LookLocker_t{int(ti)}.nii.gz" for ti in t_labels
     ]
-    mris = [nibabel.nifti1.load(ll) for ll in lls]
-    data = [mri.get_fdata(dtype=np.single) for mri in mris]
-    D = np.array(data)
-    q = np.quantile(D[0], mask_quantile)
-    valid_voxels = D[0] > q
-    voxel_mask = np.where(valid_voxels)
-    voxel_mask = np.array(voxel_mask).T
-    Dmasked = np.array([D[:, i, j, k] for (i, j, k) in voxel_mask])
-    fit_voxel = voxel_fitter(t_data)
-    vfunc = np.vectorize(fit_voxel, signature="(n) -> (3)")
-    tic = time.time()
-    fitted_coefficients = vfunc(Dmasked)
-    toc = time.time()
-    logger.info(
-        f"Fitted LL T1map in {ll_dir}, {len(voxel_mask)} voxel over {(toc - tic) / 60:.3f}min "
+    D = np.array([nibabel.nifti1.load(ll).get_fdata() for ll in lls])
+    lowermost = np.sort(np.unique(D[0]))
+
+    # Keep only largest island, but with hole-filling.
+    mask_labels = skimage.measure.label(D[0] > lowermost[threshold_number])
+    regions = skimage.measure.regionprops(mask_labels)
+    regions.sort(key=lambda x: x.num_pixels, reverse=True)
+    largest_island = mask_labels == regions[0].label
+    largest_island = skimage.morphology.remove_small_holes(
+        largest_island, 10 ** (D.ndim - 1), connectivity=2
     )
+    valid_voxels = (D[0] > 0) * largest_island
+
+    D_normalized = np.nan * np.zeros_like(D)
+    D_normalized[:, valid_voxels] = D[:, valid_voxels] / D[0][valid_voxels]
+    voxel_mask = np.array(np.where(valid_voxels)).T
+    Dmasked = np.array([D_normalized[:, i, j, k] for (i, j, k) in voxel_mask])
+
+    with tqdm.tqdm(total=len(Dmasked)) as pbar:
+        voxel_fitter = partial(fit_voxel, t_data, pbar)
+        vfunc = np.vectorize(voxel_fitter, signature="(n) -> (3)")
+        fitted_coefficients = vfunc(Dmasked)
+
+    x1, x2, x3 = (
+        fitted_coefficients[:, 0],
+        fitted_coefficients[:, 1],
+        fitted_coefficients[:, 2],
+    )
+
+    I, J, K = voxel_mask.T
     T1map = np.nan * np.zeros_like(D[0])
-    T1map[voxel_mask[:, 0], voxel_mask[:, 1], voxel_mask[:, 2]] = (
-        ll_correction(
-            fitted_coefficients[:, 0],
-            fitted_coefficients[:, 1],
-            fitted_coefficients[:, 2],
-        )
-        * 1000.0  # convert to ms
+    T1map[I, J, K] = (0.1 + x2**2) / x3**2 * 1000.0  # convert to ms
+
+    affine = nibabel.nifti1.load(lls[0]).affine
+    return nibabel.nifti1.Nifti1Image(T1map.astype(np.single), affine)
+
+
+def postprocess_T1map(
+    T1map_mri: nibabel.nifti1.Nifti1Image, T1_lo: float, T1_hi: float
+) -> nibabel.nifti1.Nifti1Image:
+    T1map = T1map_mri.get_fdata()
+    T1map[T1map > T1_hi] = np.nan  # Threshold too large values
+    T1map[T1map < T1_lo] = np.nan  # Threshold too small values
+
+    # Find the well-defined remaining voxels.
+    well_defined = skimage.measure.label(np.isfinite(T1map))
+    regions = skimage.measure.regionprops(well_defined)
+    regions.sort(key=lambda x: x.num_pixels, reverse=True)
+    head_island = well_defined == regions[0].label
+    head_island = skimage.morphology.remove_small_holes(
+        head_island, 10 ** (head_island.ndim), connectivity=2
     )
-    return nibabel.nifti1.Nifti1Image(T1map, mris[0].affine)
+
+    # Smoothly fill in undefined voxels.
+    T1map = np.where(np.isnan(T1map), nan_filter_gaussian(T1map, 1.0), T1map)
+    T1map[~head_island] = np.nan  # Remove anything outside of the head_island
+    return nibabel.nifti1.Nifti1Image(T1map, T1map_mri.affine)
 
 
 if __name__ == "__main__":
@@ -104,13 +138,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--inputdir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--mask_quantile", type=float, default=0.0)
+    parser.add_argument("--threshold_number", type=int, default=0)
     args = parser.parse_args()
-    T1map_nii = estimate_t1map(args.inputdir, args.mask_quantile)
-    nibabel.nifti1.save(T1map_nii, args.output)
 
-    if "T1map" in str(args.output):
-        R1map_nii = nibabel.nifti1.Nifti1Image(
-            1.0 / T1map_nii.get_fdata(dtype=np.single), T1map_nii.affine
-        )
-        nibabel.nifti1.save(R1map_nii, str(args.output).replace("T1map", "R1map"))
+    T1map_nii = estimate_t1map(args.inputdir, args.threshold_number)
+    nibabel.nifti1.save(T1map_nii, args.output)

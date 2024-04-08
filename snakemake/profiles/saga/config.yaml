@@ -36,4 +36,4 @@ jobs: 16
 # scheduler: greedy
 use-conda: True
 # rerun-triggers: mtime
-# shadow-prefix: $OCALSCRATCH
+# shadow-prefix: $LOCALSCRATCH

@@ -27,6 +27,12 @@ rule all:
     #     res=config["resolution"],
     #     session=SESSIONS,
     # )
+    # expand(
+    #     "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz",
+    #     subject=config["subjects"],
+    #     res=config["resolution"],
+    #     session=SESSIONS,
+    # )
 
 rule T1map_estimation_from_LL:
   input:
@@ -37,7 +43,8 @@ rule T1map_estimation_from_LL:
     "python gmri2fem/mriprocessing/looklocker_to_T1map.py"
     " --inputdir {input}"
     " --output {output}"
-    " --mask_quantile 0.0"
+    " --threshold_number 3"
+    # " --mask_quantile 0.1"
 
 
 rule mri_convert_all:
@@ -46,15 +53,15 @@ rule mri_convert_all:
       "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
       subject=config["subjects"],
       session=SESSIONS,
-      sequence="T1w"
+      sequence=["T1w", "T1map_LL_auto"]
     )
-              
+
 
 rule mri_convert:
     input:
         lambda wc: (
             "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
-            if ("T1map_LookLocker" in wc.sequence) else (
+            if any([(x in wc.sequence) for x in ["T1map_LL_auto", "T1map_LookLocker"]]) else (
               "data/mri_dataset/{subject}/{session}/dwi/{subject}_{session}_{sequence}.nii.gz"
               if ("DTI" in wc.sequence) else
               "data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
@@ -125,8 +132,8 @@ rule registration_bimodal:
 
 rule concentration_estimate:
     input:
-        image="data/mri_processed_data/{subject}/T1map_LookLocker_registered/{subject}_{session}_T1map_LookLocker_registered.mgz",
-        reference="data/mri_processed_data/{subject}/T1map_LookLocker_registered/{subject}_ses-01_T1map_LookLocker_registered.mgz",
+        image="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1map_LL_auto_registered.mgz",
+        reference="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1map_LL_auto_registered.mgz",
     output:
         "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_LL.mgz"
     shell:
@@ -141,7 +148,7 @@ rule grow_refroi:
     input:
         seed="data/mri_processed_data/{subject}/{subject}_refroi_seed.mgz",
         references=expand(
-            "data/mri_processed_data/{{subject}}/T1w_registered/{{subject}}_{session}_T1w_registered.mgz",
+            "data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.mgz",
             session=SESSIONS
         )
     output:
@@ -155,7 +162,7 @@ rule grow_refroi:
 
 rule normalize_T1w:
     input:
-        image="data/mri_processed_data/{subject}/T1w_registered/{subject}_{session}_T1w_registered.mgz",
+        image="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.mgz",
         refroi="data/mri_processed_data/{subject}/{subject}_refroi.mgz",
     output:
         "data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.mgz"
@@ -196,7 +203,7 @@ rule T1maps_T1w_estimated:
 rule concentration_estimate_T1w: 
     input:
         image="data/mri_processed_data/{subject}/T1map_T1w/{subject}_{session}_T1map_T1w.mgz",
-        reference="data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.mgz",
+        reference="data/mri_processed_data/{subject}/T1map_T1w/{subject}_ses-01_T1map_T1w.mgz",
         mask="data/mri_processed_data/{subject}/brainmask.mgz",
     output:
         "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz"
@@ -205,6 +212,7 @@ rule concentration_estimate_T1w:
         " --input {input.image}"
         " --reference {input.reference}"
         " --output {output}"
+
 
 rule recon_all_base:
     input:
@@ -305,6 +313,40 @@ rule mri2fenics:
         " --mesh_hdf {input.meshfile}"
         " --output_hdf {output.hdf}"
         " --timestamps {input.timestamps}"
+
+rule dilated_mask:
+    input:
+        "data/mri_processed_data/freesurfer/{subjectid}/mri/wmparc.mgz"
+    output: 
+        "data/mri_processed_data/{subjectid}/mask_dilated.mgz"
+    shell:
+        "mri_binarize --i {input} --gm --dilate 2 --o {output}"
+
+rule clean_dti:
+    input:
+        dtifile = "data/mri_processed_data/freesurfer/{subjectid}/dti/tensor.nii.gz",
+        maskfile = "data/mri_processed_data/{subjectid}/mask_dilated.mgz"
+    output:
+        dtifile = "data/mri_processed_data/{subjectid}/dti/{subjectid}_dti-tensor_clean.mgz",
+    shell:
+        "python gmri2fem/dti/clean_dti_data.py"
+        " --dti {input.dtifile}"
+        " --mask {input.maskfile}"
+        " --out {output}"
+
+rule dti2hdf:
+    input:
+        meshfile = "data/mri_processed_data/{subjectid}/modeling/resolution32/mesh.hdf",
+        dtifile= "data/mri_processed_data/{subjectid}/dti/{subjectid}_dti-tensor_clean.mgz"
+    output:
+        "data/mri_processed_data/{subjectid}/modeling/resolution{res}/dti.hdf"
+    shell:
+        "python gmri2fem/dti/dti_data_to_mesh.py"
+        " --dti {input.dtifile}"
+        " --mesh {input.meshfile}"
+        " --out {output}"
+
+
 
 rule surface_stl_conversion:
     input:
