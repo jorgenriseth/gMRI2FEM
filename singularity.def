@@ -1,0 +1,35 @@
+Bootstrap: docker
+From: condaforge/mambaforge
+
+
+%files
+  environment.yml
+
+%environment
+  export CONDA_ENV_NAME="gmri2fem"
+  #export CONDA_ENV_NAME=$(head -n 1 environment.yml | cut -f 2 -d ' ')
+
+  export PATH="/usr/local/freesurfer/7.2.0/bin:$PATH"
+  export FREESURFER_HOME="/usr/local/freesurfer/7.2.0"
+  source $FREESURFER_HOME/SetUpFreeSurfer.sh
+  export FS_LICENSE=/license.txt
+
+  . /opt/conda/etc/profile.d/conda.sh
+  . /opt/conda/etc/profile.d/mamba.sh
+  conda activate $CONDA_ENV_NAME
+
+
+%post
+  # Download and install freesurfer. Remove installer afterwards to reduce image.
+  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-en binutils libx11-dev gettext xterm x11-apps make csh tcsh file bc xorg xorg-dev libncurses5 libjpeg62
+
+  wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.2.0/freesurfer_7.2.0_amd64.deb
+  dpkg -i freesurfer_7.2.0_amd64.deb
+  rm freesurfer_7.2.0_amd64.deb
+
+  #  Create environment
+  /opt/conda/bin/mamba env create -n $CONDA_ENV_NAME -f environment.yml
+
+%runscript
+  mamba run -n $CONDA_ENV_NAME /bin/bash -c "$@"
+
