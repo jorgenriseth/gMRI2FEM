@@ -1,18 +1,23 @@
 Bootstrap: docker
-From: condaforge/mambaforge
+From: ubuntu:latest
 
 
 %files
   environment.yml
+  pyproject.toml
+
 
 %environment
-  export CONDA_ENV_NAME="gmri2fem"
-  #export CONDA_ENV_NAME=$(head -n 1 environment.yml | cut -f 2 -d ' ')
-
   export PATH="/usr/local/freesurfer/7.2.0/bin:$PATH"
   export FREESURFER_HOME="/usr/local/freesurfer/7.2.0"
   source $FREESURFER_HOME/SetUpFreeSurfer.sh
   export FS_LICENSE=/license.txt
+  
+
+  export PATH="/greedy-1.3.0-alpha-Linux-gcc64/bin:$PATH"
+
+  export CONDA_ENV_NAME="gmri2fem"
+  #export CONDA_ENV_NAME=$(head -n 1 environment.yml | cut -f 2 -d ' ')
 
   . /opt/conda/etc/profile.d/conda.sh
   . /opt/conda/etc/profile.d/mamba.sh
@@ -20,15 +25,48 @@ From: condaforge/mambaforge
 
 
 %post
-  # Download and install freesurfer. Remove installer afterwards to reduce image.
-  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-en binutils libx11-dev gettext xterm x11-apps make csh tcsh file bc xorg xorg-dev libncurses5 libjpeg62
+  apt-get update -y 
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    wget \
+    language-pack-en \
+    binutils \
+    libx11-dev \
+    gettext \
+    xterm \
+    x11-apps \
+    make \
+    csh \
+    tcsh \
+    file \
+    bc \
+    xorg \
+    xorg-dev \
+    libncurses5 \
+    libjpeg62
 
+  # Install and setup conda/mamba
+  wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+  bash Miniforge3.sh -b -p "/opt/conda"
+
+  # Download and install greedy
+  wget https://sourceforge.net/projects/greedy-reg/files/Nightly/greedy-nightly-Linux-gcc64.tar.gz/download -O greedy.tar.gz
+  tar xvfz greedy.tar.gz 
+  rm greedy.tar.gz
+
+  # Download and install freesurfer. Remove installer afterwards to reduce image.
   wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.2.0/freesurfer_7.2.0_amd64.deb
   dpkg -i freesurfer_7.2.0_amd64.deb
   rm freesurfer_7.2.0_amd64.deb
 
   #  Create environment
+  export CONDA_ENV_NAME="gmri2fem"  # Possible to outsource?
+  export CONDA_ENV_NAME=$(head -n 1 environment.yml | cut -f 2 -d ' ')
   /opt/conda/bin/mamba env create -n $CONDA_ENV_NAME -f environment.yml
+  . /opt/conda/etc/profile.d/conda.sh
+  . /opt/conda/etc/profile.d/mamba.sh
+  conda activate $CONDA_ENV_NAME
+  #pip install -e .
+
 
 %runscript
   mamba run -n $CONDA_ENV_NAME /bin/bash -c "$@"
