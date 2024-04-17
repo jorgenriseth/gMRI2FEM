@@ -1,0 +1,25 @@
+Bootstrap: localimage
+From: singularity/fs-greedy.sif
+
+%files
+  environment.yml
+  pyproject.toml 
+  gmri2fem
+
+
+%post -c /bin/bash
+  # Create environment
+  export CONDA_ENV_NAME="gmri2fem"
+  /opt/conda/bin/mamba env create -n $CONDA_ENV_NAME -f environment.yml
+
+  . /opt/conda/etc/profile.d/conda.sh
+  . /opt/conda/etc/profile.d/mamba.sh
+  conda activate $CONDA_ENV_NAME
+  /opt/conda/envs/$CONDA_ENV_NAME/bin/pip install --root-user-action=ignore -e .
+
+  echo "source /opt/conda/bin/activate gmri2fem" > /environment
+  chmod +x /environment
+
+%environment -c /bin/bash
+  export BASH_ENV=/environment
+  export DIJITSO_CACHE_DIR="$HOME/.dijitso_cache"

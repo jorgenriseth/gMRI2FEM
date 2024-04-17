@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: ubuntu:latest
+
+
+%environment
+  export PATH="/greedy-1.3.0-alpha-Linux-gcc64/bin:$PATH"
+  export PATH="/usr/local/freesurfer/7.2.0/bin:$PATH"
+  export FREESURFER_HOME="/usr/local/freesurfer/7.2.0"
+  source $FREESURFER_HOME/SetUpFreeSurfer.sh
+  export FS_LICENSE=/license.txt
+
+
+%post
+  apt-get update -y 
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    wget \
+    language-pack-en \
+    binutils \
+    libx11-dev \
+    gettext \
+    xterm \
+    x11-apps \
+    make \
+    csh \
+    tcsh \
+    file \
+    bc \
+    xorg \
+    xorg-dev \
+    libncurses5 \
+    libjpeg62
+
+  # Download and install greedy
+  wget https://sourceforge.net/projects/greedy-reg/files/Nightly/greedy-nightly-Linux-gcc64.tar.gz/download -O greedy.tar.gz
+  tar xvfz greedy.tar.gz 
+  rm greedy.tar.gz
+
+  # Download and install freesurfer. Remove installer afterwards to reduce image.
+  wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.2.0/freesurfer_7.2.0_amd64.deb
+  dpkg -i freesurfer_7.2.0_amd64.deb
+  rm freesurfer_7.2.0_amd64.deb
+
+  # Install and setup conda/mamba
+  wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+  bash Miniforge3.sh -b -p "/opt/conda"
