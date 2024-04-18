@@ -11,13 +11,13 @@
 
 # Number of tasks (cores):
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1 
+#SBATCH --cpus-per-task=1
 
 # Logs
 #SBATCH --output='logs/snakerunner_%j.out'
 
-echo $@ 
+echo $@
 echo "------"
 echo "LOCALSCRATCH:" $LOCALSCRATCH
-echo "SCRATCH": $SCRATCH 
-snakemake $@ -p --profile "snakeprofiles/saga"  --configfile "snakeprofiles/saga/snakeconfig.yaml"
+echo "SCRATCH": $SCRATCH
+snakemake $@ -p --profile "snakeprofiles/saga"

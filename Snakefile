@@ -18,6 +18,11 @@ if workflow.use_singularity:
 if workflow.run_local:
     workflow._shadow_prefix = os.environ.get("LOCALSCRATCH")
 
+if workflow._shadow_prefix is not None:
+  shadow_directive = "full"
+
+
+
 SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
 print(SESSIONS)
 
@@ -31,20 +36,7 @@ rule all:
         subject=config["subjects"],
         session=SESSIONS
     )
-    # expand(
-    #     "data/mri_processed_data/modeling/resolution{res}/data.hdf",
-    #     subject=config["subjects"],
-    #     res=config["resolution"],
-    #     session=SESSIONS,
-    # )
-    # expand(
-    #     "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz",
-    #     subject=config["subjects"],
-    #     res=config["resolution"],
-    #     session=SESSIONS,
-    # )
-    #
-    #
+
 
 rule mri_convert:
     input:
@@ -67,6 +59,7 @@ rule T1map_estimation_from_LL:
     "data/mri_dataset/{subject}/{session}/anat"
   output:
     "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_T1map_LL_auto.nii.gz"
+  shadow: "minimal"
   shell:
     "python gmri2fem/mriprocessing/looklocker_to_T1map.py"
     " --inputdir {input}"
