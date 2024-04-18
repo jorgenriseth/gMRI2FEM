@@ -8,11 +8,14 @@ requires-python = ">=3.9"
 description = "Processing pipeline for glymphatic MRI."
 readme = "README.md"
 license = {file = "LICENSE"} 
-dependencies = [
-    "pantarei @ git+https://github.com/jorgenriseth/pantarei.git"
-]
+# dependencies = [
+#     "pantarei @ git+https://github.com/jorgenriseth/pantarei.git"
+# ]
 
 [tool.setuptools]
 packages = [
     "gmri2fem"
 ]
+
+[tool.mypy]
+plugins = "numpy.typing.mypy_plugin"

@@ -1,10 +1,9 @@
 import os
 import numpy as np
 from pathlib import Path
-from gmri2fem.filters import is_datetime_nii
 
 singularity: "singularity/gmri2fem.sif"
-shell.executable("/bin/bash")
+shell.executable("bash")
 
 configfile: "snakeconfig.yaml"
 
@@ -21,6 +20,9 @@ if workflow.run_local:
 
 SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
 print(SESSIONS)
+
+wildcard_constraints:
+  session = "ses-\d{2}"
 
 rule all:
   input:
@@ -41,6 +43,24 @@ rule all:
     #     res=config["resolution"],
     #     session=SESSIONS,
     # )
+    #
+    #
+
+rule mri_convert:
+    input:
+        lambda wc: (
+            "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
+            if any([(x in wc.sequence) for x in ["T1map_LL_auto", "T1map_LookLocker"]]) else (
+              "data/mri_dataset/{subject}/{session}/dwi/{subject}_{session}_{sequence}.nii.gz"
+              if ("DTI" in wc.sequence) else
+              "data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
+            )
+          )
+    output:
+        "data/mri_processed_data/{subject}/conformed/{subject}_{session,[A-Za-z0-9\-]+}_{sequence}_conformed.mgz"
+    shell:
+        "mri_convert --conform -odt float {input} {output}"
+
 
 rule T1map_estimation_from_LL:
   input:
@@ -52,17 +72,8 @@ rule T1map_estimation_from_LL:
     " --inputdir {input}"
     " --output {output}"
     " --threshold_number 3"
-    # " --mask_quantile 0.1"
 
 
-rule mri_convert_all:
-  input:
-    expand(
-      "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
-      subject=config["subjects"],
-      session=SESSIONS,
-      sequence=["T1w"]#@, "T1map_LL_auto"]
-    )
 
 rule mri_register_T1w_greedy:
     input:
@@ -94,20 +105,6 @@ rule greedy_apply_transform:
       " -r {input.transform}"
 
 
-rule mri_convert:
-    input:
-        lambda wc: (
-            "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
-            if any([(x in wc.sequence) for x in ["T1map_LL_auto", "T1map_LookLocker"]]) else (
-              "data/mri_dataset/{subject}/{session}/dwi/{subject}_{session}_{sequence}.nii.gz"
-              if ("DTI" in wc.sequence) else
-              "data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_{sequence}.nii.gz"
-            )
-          )
-    output:
-        "data/mri_processed_data/{subject}/conformed/{subject}_{session,[A-Za-z0-9\-]+}_{sequence}_conformed.mgz"
-    shell:
-        "mri_convert --conform -odt float {input} {output}"
 
 rule template_creation:
     input:

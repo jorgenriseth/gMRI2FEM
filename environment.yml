@@ -23,3 +23,4 @@ dependencies:
   - svmtk
   - pantarei
   - loguru
+  - tqdm
