@@ -1,24 +1,25 @@
 name: gmri2fem
 channels:
   - conda-forge
-  - defaults
   - bioconda
+  - jorgenriseth
+  - defaults
 dependencies:
   - python >= 3.7, <3.12
   - pip
-  - fenics
   - h5py
+  - fenics
   - matplotlib
-  - numpy
   - scipy
+  - numpy
   - jupyter
-  - notebook==6.3.0
+  #- notebook==6.3.0
   - nibabel
   - pydicom
   - scikit-image
-  - pydantic
-  - pydantic-settings
-  - snakemake>=7.32.3
+  - snakemake >=7.32.3, <8
   - pint
   - meshio
   - svmtk
+  - pantarei
+  - loguru

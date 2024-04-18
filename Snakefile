@@ -3,10 +3,17 @@ import numpy as np
 from pathlib import Path
 from gmri2fem.filters import is_datetime_nii
 
-
+singularity: "singularity/gmri2fem.sif"
 shell.executable("/bin/bash")
 
 configfile: "snakeconfig.yaml"
+
+if workflow.use_singularity:
+  shell.prefix(
+    "set -eo pipefail; "
+    + "source /opt/conda/etc/profile.d/conda.sh && "
+    + "conda activate $CONDA_ENV_NAME && "
+  )
 
 # To enable local scratch disks on clusters.
 if workflow.run_local:
@@ -14,6 +21,7 @@ if workflow.run_local:
 
 SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
 print(SESSIONS)
+
 rule all:
   input:
     T1maps_LL = expand(
@@ -53,8 +61,37 @@ rule mri_convert_all:
       "data/mri_processed_data/{subject}/conformed/{subject}_{session}_{sequence}_conformed.mgz",
       subject=config["subjects"],
       session=SESSIONS,
-      sequence=["T1w", "T1map_LL_auto"]
+      sequence=["T1w"]#@, "T1map_LL_auto"]
     )
+
+rule mri_register_T1w_greedy:
+    input:
+      fixed="data/mri_dataset/sub-01/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+      moving="data/mri_dataset/sub-01/{session}/anat/{subject}_{session}_T1w.nii.gz"
+    output:
+      transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat"
+    threads: 4
+    shell:
+      "greedy -d 3 -a" 
+      " -i {input.fixed} {input.moving}"
+      " -o {output}"
+      " -ia-image-centers"
+      " -dof 6"
+      " -m NCC 2x2x2"
+      " -threads {threads}"
+
+rule greedy_apply_transform:
+    input:
+      fixed="data/mri_dataset/sub-01/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+      transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat",
+      moving="data/mri_dataset/sub-01/{session}/anat/{subject}_{session}_T1w.nii.gz"
+    output:
+      "data/mri_processed_data/{subject}/registered_greedy/{subject}_{session}_T1w.nii.gz",
+    shell:
+      "greedy -d 3"
+      " -rf {input.fixed}"
+      " -rm {input.moving} {output}"
+      " -r {input.transform}"
 
 
 rule mri_convert:
@@ -71,7 +108,6 @@ rule mri_convert:
         "data/mri_processed_data/{subject}/conformed/{subject}_{session,[A-Za-z0-9\-]+}_{sequence}_conformed.mgz"
     shell:
         "mri_convert --conform -odt float {input} {output}"
-
 
 rule template_creation:
     input:
@@ -93,6 +129,7 @@ rule template_creation:
 
 
 ruleorder: registration_T1w > registration_bimodal
+
 
 rule registration_T1w:
     input:
