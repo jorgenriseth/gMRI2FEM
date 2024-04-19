@@ -1,6 +1,59 @@
 # Running containers on clusters
 Several of the workflows requires large amounts of memory, and runs for a long time. It is therefore preferable to defer the work to a cluster such as TSD-colossus, to keep your personal laptop/workstation available for use.
 
+## Prepare the files to be sent 
+
+To run the workflow, we are going to need a few files, that aren't necessarily available on the cluster. For simplicity, define the following env-variables:
+```bash
+export GMRI2FEM_REMOTE_PATH="[host]:[/path/to/project/in/remote]"
+
+```
+1. Singularity-container: from project root folder, run (also needs license)
+  ```bash
+  rsync --mkpath --info=progress2 singularity/gmri2fem.sif saga:[/path/to/project/in/remote]/singularity/gmri2fem.sif
+  rsync --relative singularity/license.txt $GMRI2FEM_REMOTE_PATH
+
+  ```
+2. Required input-data. This two-step procedure might not be the most efficient when `rsync` is available, but is closer to the corresponding procedure on secure clusters without an internet connection.
+  ```bash
+  tar cvfz data.tar.gz data/mri_dataset/[somesubject] data/mri_processed_data/freesurfer/[somesubject]
+  rsync --relative -r data.tar.gz $GMRI2FEM_REMOTE_PATH
+  rsync --relative -r data/mri_dataset/derivatives/timetable.csv $GMRI2FEM_REMOTE_PATH
+
+3. Snakefile and neccessary additonals:
+  ```bash
+  rsync --relative -r Snakefile snakeconfig.yaml snakemake/profiles/[profile] $GMRI2FEM_REMOTE_PATH
+  ```
+Filelist:
+```bash
+- gmri2fem/
+- scripts/
+- snakeprofiles/
+- singularity/gmri2fem.sif
+- singularity/license.txt
+- Snakefile
+- snakeconfig.yaml
+- envionment.yml
+- pyproject.toml
+- sagamake.sh
+```
+Send all necessary source files:
+```bash
+rsync --info=progress2 -za --relative --mkpath gmri2fem scripts snakeprofiles singularity/{gmri2fem.sif,license.txt} environment.yml pyproject.toml sagamake.sh Snakefile snakeconfig.yaml $GMRI2FEM_REMOTE_PATH
+```
+Decide which parts of the data are necessary to send, and send those along as well, using same command as above. Some that are easily forgotten 
+```bash
+data/mri_dataset/derivatives/timetable.csv
+data/mri_dataset/participants.tsv
+data/mri_processed_data/freesurfer/[subject] 
+```
+Log into remote over ssh, and enter the project directory. Since it's preferable to have a distinct job for executing `snakemake`, we run the commands
+```bash
+sbatch sagamake.sh [file or rule]
+```
+where `[file or rule]` refers to a typical target for a snakemake workflow. This will schedule a job which executes `snakemake` with the `saga` snakeprofile, which specifies several command line arguments for starting the jobs with singularity and slurm as well as the available resources.
+
+
 ## Singularity/Apptainer
 The Sigma2-administered clusters rely on Apptainers (previously Singularity) or podman for running containers. We will be using apptainers. The official documentation can be a handful to get started, but a nice tutorial is available at [https://carpentries-incubator.github.io/singularity-introduction/]
 
@@ -55,12 +108,17 @@ bash Miniforge3-$(uname)-$(uname -m).sh -b -p $HOME/conda
 source "${HOME}/conda/etc/profile.d/conda.sh"
 source "${HOME}/conda/etc/profile.d/mamba.sh"
 ```
+
+
+## Sending files
+Use rsync to move the entire directory:
+```bash
+rsync -az --info=progress2 gmri2fem [host:][host/project/path]
+```
+
 ## Executing snakemake workflows with symlinks
 When snakemake executes workflows using singularity, it passes the argument "--home [path/to/project]" to `singularity exec`. This means that files whose absolute path is not situated within the proejct root directory that are used by workflows needs to be explicitly passed to 
 ```bash
 snakemake [workflow or filepaths]--cores N --use-singularity --singularity-args "-c -B license.txt:/license.txt -B '$(pwd)' [-B /proper/path/to/data]"
 ```
-
-
-
 

@@ -1,6 +1,5 @@
 import re
 import warnings
-import time
 from functools import partial
 from pathlib import Path
 from typing import Callable, Any
@@ -111,25 +110,45 @@ def estimate_t1map(
 
 
 def postprocess_T1map(
-    T1map_mri: nibabel.nifti1.Nifti1Image, T1_lo: float, T1_hi: float
+    T1map_mri: nibabel.nifti1.Nifti1Image,
+    T1_lo: float,
+    T1_hi: float,
+    radius: int = 10,
+    erode_dilate_factor: float = 1.3,
 ) -> nibabel.nifti1.Nifti1Image:
     T1map = T1map_mri.get_fdata()
-    T1map[T1map > T1_hi] = np.nan  # Threshold too large values
-    T1map[T1map < T1_lo] = np.nan  # Threshold too small values
 
-    # Find the well-defined remaining voxels.
-    well_defined = skimage.measure.label(np.isfinite(T1map))
-    regions = skimage.measure.regionprops(well_defined)
+    # Create mask for largest island.
+    mask = skimage.measure.label(np.isfinite(T1map))
+    regions = skimage.measure.regionprops(mask)
     regions.sort(key=lambda x: x.num_pixels, reverse=True)
-    head_island = well_defined == regions[0].label
-    head_island = skimage.morphology.remove_small_holes(
-        head_island, 10 ** (head_island.ndim), connectivity=2
+    mask = mask == regions[0].label
+    skimage.morphology.remove_small_holes(
+        mask, 10 ** (mask.ndim), connectivity=2, out=mask
     )
+    skimage.morphology.binary_dilation(mask, skimage.morphology.ball(radius), out=mask)
+    skimage.morphology.binary_erosion(
+        mask, skimage.morphology.ball(erode_dilate_factor * radius), out=mask
+    )
+    # Remove outliers and small surface artifacts
+    surface_vox = np.isfinite(T1map) * (~mask)
+    print(f"Removing {surface_vox.sum()} voxels outside of the head mask")
+    T1map[~mask] = np.nan
 
-    # Smoothly fill in undefined voxels.
-    T1map = np.where(np.isnan(T1map), nan_filter_gaussian(T1map, 1.0), T1map)
-    T1map[~head_island] = np.nan  # Remove anything outside of the head_island
+    outliers = np.logical_or(T1map < T1_lo, T1_hi < T1map)
+    print("Removing", outliers.sum(), f"voxels outside the range ({T1_lo}, {T1_hi}).")
+    T1map[outliers] = np.nan
+
+    # Fill internallly missing values
+    fill_mask = np.isnan(T1map) * mask
+    print(f"Filling in {fill_mask.sum()} voxels within the mask.")
+    T1map[fill_mask] = nan_filter_gaussian(T1map, 1.0)[fill_mask]
     return nibabel.nifti1.Nifti1Image(T1map, T1map_mri.affine)
+
+
+def T1_to_R1(T1map_mri: nibabel.nifti1.Nifti1Image):
+    T1map = T1map_mri.get_fdata()
+    return nibabel.nifti1.Nifti1Image(1 / T1map, T1map_mri.affine)
 
 
 if __name__ == "__main__":
@@ -139,7 +158,12 @@ if __name__ == "__main__":
     parser.add_argument("--inputdir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--threshold_number", type=int, default=0)
+    parser.add_argument("--T1_low", type=int, default=50) parser.add_argument("--T1_hi", type=int, default=5000)
     args = parser.parse_args()
 
     T1map_nii = estimate_t1map(args.inputdir, args.threshold_number)
     nibabel.nifti1.save(T1map_nii, args.output)
+
+    postprocess_T1map(
+        T1map_nii, args.T1_low, args.T1_hi, radius=10, erode_dilate_factor=1.3
+    )
