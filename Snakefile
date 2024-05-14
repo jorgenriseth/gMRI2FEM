@@ -59,7 +59,6 @@ rule T1map_estimation_from_LL:
     "data/mri_dataset/{subject}/{session}/anat"
   output:
     "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_T1map_LL_auto.nii.gz"
-  shadow: "minimal"
   shell:
     "python gmri2fem/mriprocessing/looklocker_to_T1map.py"
     " --inputdir {input}"

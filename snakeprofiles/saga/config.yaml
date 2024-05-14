@@ -8,16 +8,13 @@ cluster:
     --time={resources.time}
 default-resources:
   - account=nn9279k
-  - mem_mb='12G'
-  - time='05:00:00'
-  - cpus_per_task=1
-  - gres='localscratch:8G'
+  - mem_mb='32G'
+  - time='10:00:00'
+  - slurm_extra="--qos devel"
   - qos='normal'
 jobname: "{rule}.{jobid}"
 max-jobs-per-second: 1
 max-status-checks-per-second: 10
-jobs: 10
+jobs: 50
 use-singularity: True
 singularity-args: " -c -e -B '$(pwd)' -B singularity/license.txt:/license.txt "
-shadow: True
-# use-conda: True
