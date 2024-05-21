@@ -1,0 +1,82 @@
+rule concentration_estimate:
+    input:
+        image="data/mri_processed_data/{subject}/T1map_hybrid/{subject}_{session}_T1map_hybrid.nii.gz",
+        reference="data/mri_processed_data/{subject}/T1map_hybrid/{subject}_ses-01_T1map_hybrid.nii.gz",
+    output:
+        "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz"
+    shell:
+        "python gmri2fem/mriprocessing/estimate_concentration.py"
+        " --input {input.image}"
+        " --reference {input.reference}"
+        " --output {output}"
+        " --r1 0.0045"
+
+
+rule grow_refroi:
+    input:
+        seed="data/mri_processed_data/{subject}/{subject}_refroi_seed.mgz",
+        references=expand(
+            "data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.mgz",
+            session=SESSIONS
+        )
+    output:
+        "data/mri_processed_data/{subject}/{subject}_refroi.mgz",
+    shell:
+        "python gmri2fem/mriprocessing/grow_refroi.py"
+        " --seed {input.seed}"
+        " --references {input.references}"
+        " --output {output}"
+
+
+rule normalize_T1w:
+    input:
+        image="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.mgz",
+        refroi="data/mri_processed_data/{subject}/{subject}_refroi.mgz",
+    output:
+        "data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.mgz"
+    shell:
+        "python gmri2fem/mriprocessing/normalize_images.py"
+        " --image {input.image}"
+        " --refroi {input.refroi}"
+        " --output {output}"
+
+
+rule T1map_literature:
+    input:
+        "data/mri_processed_data/freesurfer/{subject}/mri/aseg.mgz"
+    output:
+        t1map_synth = "data/mri_processed_data/{subject}/t1map_literature.mgz",
+        brainmask = "data/mri_processed_data/{subject}/brainmask.mgz"
+    shell:
+        "python gmri2fem/mriprocessing/t1maps.py"
+        " --aseg {input}"
+        " --t1map {output.t1map_synth}"
+        " --mask {output.brainmask}"
+
+rule T1maps_T1w_estimated:
+    input:
+        T1w="data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.mgz",
+        T1w0="data/mri_processed_data/{subject}/T1w_normalized/{subject}_ses-01_T1w_normalized.mgz",
+        T1map0="data/mri_processed_data/{subject}/t1map_literature.mgz"
+    output:
+        "data/mri_processed_data/{subject}/T1map_T1w/{subject}_{session}_T1map_T1w.mgz"
+    shell:
+        "python gmri2fem/mriprocessing/estimate_t1maps.py"
+        " --inputT1w {input.T1w}"
+        " --referenceT1w {input.T1w0}"
+        " --referenceT1map {input.T1map0}"
+        " --output {output}"
+
+
+rule concentration_estimate_T1w: 
+    input:
+        image="data/mri_processed_data/{subject}/T1map_T1w/{subject}_{session}_T1map_T1w.mgz",
+        reference="data/mri_processed_data/{subject}/T1map_T1w/{subject}_ses-01_T1map_T1w.mgz",
+        mask="data/mri_processed_data/{subject}/brainmask.mgz",
+    output:
+        "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration_T1w.mgz"
+    shell:
+        "python gmri2fem/mriprocessing/estimate_concentration.py"
+        " --input {input.image}"
+        " --reference {input.reference}"
+        " --output {output}"

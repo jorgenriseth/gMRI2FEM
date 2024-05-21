@@ -1,0 +1,25 @@
+rule csfmask:
+  input:
+    "data/mri_processed_data/{subject}/registered/{subject}_ses-01_Mixed_SE-modulus_registered.nii.gz",
+  output:
+    "data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
+  shell:
+    "python gmri2fem/mriprocessing/mask_csf.py"
+    " --se {input}"
+    " --output {output}"
+
+
+
+rule hybrid_T1maps:
+   input:
+      ll="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1map_LL_auto_registered.nii.gz",
+      mixed="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1map_mixed_registered.nii.gz",
+      csfmask="data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
+   output:
+      T1map="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map_hybrid.nii.gz",
+   shell:
+      "python gmri2fem/mriprocessing/hybrid_t1maps.py"
+      " --ll {input.ll}"
+      " --mixed {input.mixed}"
+      " --csfmask {input.csfmask}"
+      " --output {output}"
