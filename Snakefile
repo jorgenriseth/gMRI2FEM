@@ -12,6 +12,7 @@ if workflow.use_singularity:
     "set -eo pipefail; "
     + "source /opt/conda/etc/profile.d/conda.sh && "
     + "conda activate $CONDA_ENV_NAME && "
+    #    + "ls -l && "
   )
 
 # To enable local scratch disks on clusters.
@@ -37,7 +38,13 @@ rule all:
     )
 
 
-include: "data/mri_dataset/Snakefile"
+module preprocessing:
+  snakefile: "data/mri_dataset/Snakefile"
+  prefix: "data/mri_dataset"
+  config: config
+
+use rule * from preprocessing as preprocessing_*
+
 include: "workflows_additional/register"
 include: "workflows_additional/recon-all"
 include: "workflows_additional/T1maps"
