@@ -158,7 +158,8 @@ if __name__ == "__main__":
     parser.add_argument("--inputdir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--threshold_number", type=int, default=0)
-    parser.add_argument("--T1_low", type=int, default=50) parser.add_argument("--T1_hi", type=int, default=5000)
+    parser.add_argument("--T1_low", type=int, default=50)
+    parser.add_argument("--T1_hi", type=int, default=5000)
     args = parser.parse_args()
 
     T1map_nii = estimate_t1map(args.inputdir, args.threshold_number)
