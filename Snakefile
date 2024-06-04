@@ -30,13 +30,10 @@ wildcard_constraints:
 SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
 rule all:
   input:
-    T1maps_LL = expand(
-        "data/mri_dataset/derivatives/{subject}/{session}/anat/{subject}_{session}_T1map_LL_auto.nii.gz",
-        subject=config["subjects"],
-        session=SESSIONS
+    expand(
+      "data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv"
+      subject=config["subjects"],
     )
-
-
 
 module preprocessing:
   snakefile: "data/mri_dataset/Snakefile"

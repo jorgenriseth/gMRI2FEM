@@ -6,6 +6,10 @@ figures/
 notebooks/
 .snakemake
 
+# Singularity containers
+*.sif
+singularity/license.txt
+
 .vscode
 
 # Byte-compiled / optimized / DLL files
