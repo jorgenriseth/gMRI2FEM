@@ -24,7 +24,7 @@ def grow_refroi(
                 tolerance=tolerances[i],
                 # connectivity=1,
             )
-            for i in range(5)
+            for i in range(len(image_data))
         ]
     )
     refroi = np.all(refrois, axis=0)

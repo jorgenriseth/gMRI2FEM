@@ -1,0 +1,34 @@
+
+rule dilated_mask:
+    input:
+        "data/mri_processed_data/freesurfer/{subjectid}/mri/wmparc.mgz"
+    output: 
+        "data/mri_processed_data/{subjectid}/mask_dilated.mgz"
+    shell:
+        "mri_binarize --i {input} --gm --dilate 2 --o {output}"
+
+
+rule clean_dti:
+    input:
+        dtifile = "data/mri_processed_data/freesurfer/{subjectid}/dti/tensor.nii.gz",
+        maskfile = "data/mri_processed_data/{subjectid}/mask_dilated.mgz"
+    output:
+        dtifile = "data/mri_processed_data/{subjectid}/dti/{subjectid}_dti-tensor_clean.mgz",
+    shell:
+        "python gmri2fem/dti/clean_dti_data.py"
+        " --dti {input.dtifile}"
+        " --mask {input.maskfile}"
+        " --out {output}"
+
+rule dti2hdf:
+    input:
+        meshfile = "data/mri_processed_data/{subjectid}/modeling/resolution32/mesh.hdf",
+        dtifile= "data/mri_processed_data/{subjectid}/dti/{subjectid}_dti-tensor_clean.mgz"
+    output:
+        "data/mri_processed_data/{subjectid}/modeling/resolution{res}/dti.hdf"
+    shell:
+        "python gmri2fem/dti/dti_data_to_mesh.py"
+        " --dti {input.dtifile}"
+        " --mesh {input.meshfile}"
+        " --out {output}"
+

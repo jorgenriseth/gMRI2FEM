@@ -1,0 +1,42 @@
+rule T1map_estimation_from_LL:
+  input:
+    "data/mri_dataset/{subject}/{session}/anat/looklocker.done"
+  output:
+    T1raw="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_T1map.nii.gz",
+    T1="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_T1map_postprocessed.nii.gz",
+    R1raw="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_R1map.nii.gz",
+    R1="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_R1map_postprocessed.nii.gz",
+  shell:
+    "python gmri2fem/mriprocessing/looklocker_to_T1map.py"
+    " --inputfile {input}"
+    " --output {output.T1raw}"
+    " --postprocessed {output.T1}"
+    " --R1 {output.R1raw}"
+    " --R1_postprocessed {output.R1}"
+
+
+rule csfmask:
+  input:
+    "data/mri_processed_data/{subject}/registered/{subject}_ses-01_acq-mixed_SE-modulus_registered.nii.gz",
+  output:
+    "data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
+  shell:
+    "python gmri2fem/mriprocessing/mask_csf.py"
+    " --se {input}"
+    " --output {output}"
+
+
+
+rule hybrid_T1maps:
+   input:
+      ll="data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-looklocker_T1map_registered.nii.gz",
+      mixed="data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_T1map_registered.nii.gz",
+      csfmask="data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
+   output:
+      T1map="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
+   shell:
+      "python gmri2fem/mriprocessing/hybrid_t1maps.py"
+      " --ll {input.ll}"
+      " --mixed {input.mixed}"
+      " --csfmask {input.csfmask}"
+      " --output {output}"

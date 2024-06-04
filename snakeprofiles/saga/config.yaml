@@ -1,0 +1,18 @@
+cluster:
+  set -euf -o pipefail  &&
+  sbatch 
+    --output="jobs/{rule}/slurm_%x_%j.out"
+    --error="jobs/{rule}/log_%x_%j.log"
+    --mem={resources.mem_mb}
+    --time={resources.time}
+default-resources:
+  - mem_mb='32G'
+  - time='10:00:00'
+  - slurm_extra="--qos devel"
+  - qos='normal'
+jobname: "{rule}.{jobid}"
+max-jobs-per-second: 1
+max-status-checks-per-second: 10
+jobs: 50
+use-singularity: True
+singularity-args: " -c -e -B '$(pwd)' -B singularity/license.txt:/license.txt "

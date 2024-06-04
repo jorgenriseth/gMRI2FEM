@@ -1,8 +1,6 @@
+.dijitso_cache
 data
-data_old/
-DATA
-FREESURFER/
-GRIP*/
+results
 figures/
 .dropboxignore
 notebooks/
