@@ -1,90 +1,61 @@
-Requirements:
-- dcm2niix
+# gMRI2FEM
 
+This repository contains code for processing glymphatic MRI-images, i.e. contrast-enhanced brain images, with special focus on concentration-estimation and conversion into dolfin for mathematical modelling of brain tracer transport using the finite element method. 
 
+While this repository may be installed as a python-package and used freely as such, it also contains a `snakemake` processing pipeline built around estimating concentrations from T1-weighted images or T1-maps, and mapping them to `dolfin`-functions. This, of course, relies on having the available data and organizing it according to the data section below.
 
-## Minor Update
-
-## MRI Preprocessing
-
-All steps are collected into one single script: `mri_preprocessing.py`. Run with
+## Setup
+### Python-environment:
+Assuming `conda`/`mamba` is installed, create an environment by running
 ```bash
-python mri_preprocessing.py PAT_XXX --skipdicom
+conda env create -n gmri2fem -f environment.yml
+conda activate gmri2fem
+```
+and install the current repository as a package (optional `-e` for editable) using 
+```bash
+pip install [-e] .
 ```
 
-1. Extract MR-images from DICOM. This is done using the script `multiframe_dicom.py` (assuming the DICOM images are in "multiframe" or "enhanced" format. Otherwise, see the outdated `sort_mri_old.py` for traditional format). The images are extracted in `.nii`-format.
+### General dependencies
+The repository relies on the following software:
+- `FreeSurfer`
+- `greedy`
+- `dcm2niix`
+- `conda`/`mamba`
 
-### Concentration Estimation
-After the preprocessing steps, ending with registration has been performed, we want to reconstruct concentrations. For this we need to create a refroi-mri using either freeview (according to Bastian's chapter in soon to be available brain-book), or using 3DSlicer. The latter has the advantage of having a flood-fill algorithm making it easy to create a "robust" refroi. The refroi should be stored as `data/PAT_XXX/refroi.nii` (TODO: Make it possible to have both `nii` and `mgz`). This enables normalization:
+Either consult their web-pages or see the `%post`-section in `singularity/fs-greedy.def` for instructions on how to install these dependencies (or build and use the singularity-container `singularity/gmri2fem.def` to install dependencies and python-environment).
+
+### `snakeconfig`
+Several parts of the pipeline can be configured to run for only for specific subjects or with specific settings. These values can be set in  the `snakeconfig.yaml` in the root folder.
+- TODO: remove resource-specifications such as num-threads to `snakeprofiles`
+- TODO: add a default for num-sessions which allows for subject-specific number of sessions
 ```bash
-python gmri2fem/mriprocessing/normalize_images.py PAT_XXX
-```
-followed by concentration reconstructions:
-```bash
-python estimatec.py [collection of arguments to be better determined]
-```
-
-## Run Freesurfer recon-all
-
-
-## Convert to FEniCS-compatible data
-Finally, the concentrations should be converted fenics-functions using the `mri2fenics.py`-script.
-
-
-
-## Running on a cluster
-
-**Work in progress**
-
-The following instructions are meant to provide an easy guide to run the MRI-processing pipeline using one of the Sigma2-administered clusters such as Saga or Colossus. While some parts only require a FreeSurfer-installation, the later parts of the processing pipeline require various python-packages. We therefor assume installation of these as well.
-
-
-To activate conda-environment on saga:
-```bash
-module load Mamba/4.14.0-0
-source ${EBROOTMAMBA}/bin/activate
-conda activate ../conda/packaga-cache/gmri2fem
-echo $EBROOTMAMBA
+subjects: [] # list of subject-names to include when running general workflows
+resolution: [32]  # list of desired SVMTK-resolutions to generate meshes and run simulations for
+sim_threads: 8  # Number of cores to use for simulatiohns
+recon_threads: 1  # number of cores to use for regon-all
+num_sessions: 5   # Expected number of sessions
 ```
 
-To execute snakemake workflows, we use the `sagamake.sh` script, and can be started as a slurm job in the following way:
-```bash
-sbatch sagamake.sh path/to/output
-```
+### Data
+The `snakemake`-pipeline requires a dataset-structure loosely based on the BIDS-data structure in a directory called `data` (could also be a symlink to an already existing dataset, although this requires some care if running with `singularity`-containers). The dataset is split into two main directories:
+- `mri_dataset`
+- `mri_processed_data`
 
-## Running pipeline using snakemake
-### 1. Resample/conform
-Assuming the MRI-data has ben extracted from DICOM to nii or mgz, located in 'DATA/{subject_id}/'. Update `snakeconfig.yml`, especially the list of subjects to all that you want to process.
-```bash
-snakemake mri_convert --cores [ncores]
-```
-This should run mri_conform on both T1 and T2-data.
-
-### 2. Register
-Secondly, perform the registration
-```bash
-snakemake register_all --cores [ncores]
-```
-
-### 3. Create a reference ROI for normalization.
-Using freeview, mark a region within the fatty regions behind the eye, to which the images should be normalized. Should be stored at top-level of subject-data, i.e. `DATA/{subject}/refroi.mgz`.
-
-### 4. Normalize
-```bash
-snakemake mri_normalize --cores [ncores]
-```
-Inputs registered T1-weighted images `DATA/{subject}/REGISTERED/xxxx.mgz` and the `refroi.mgz`, and outputs the images `DATA/{subject}/NORMALIZED/xxxx.mgz` that are normalized with respect to the median intensity of each image w.r.t. the reference ROI.
-
-### 5. Recon-all
-```bash
-snakemake mri_recon_all --cores [ncores]
-```
-Takes as input the first of the T1-weighted images, and potentially the T2-weighted image, and runs recon-all.
-
-The directory will be output to `DATA/freesurfer/{subject}`, and then a symlink will be generated to the directory within each of the subject-folders, i.e. at `DATA/{subject}/freesurfer/ -> DATA/freesurfer/subject`. The reason for this, is that freesurfer assumes a very specific structure of it's data, so this will be useful for e.g. DTI-processing.
+### `data/mri_dataset`
+The `mri_dataset`-folder should contain the following:
+- `sub-[subjectid]`: MRI-data converted from DICOM-format to Niftii, using either `dcm2niix` or the script `code/extract_mixed_sequence.py`.  Organized according to `sub-[subjectid]/ses-[XX]/[anat|dti]/sub-[subjectid]_ses-[XX]_ADDITIONALINFO.nii.gz`. All MRI-images comes with a "sidecar"-file in `json`-format providing additional information.
+- `derivatives/sub-[subjectid]`: Contains MRI-data directly derived from the Niftii-files in the subject folders, such as T1-maps derived from LookLocker using NordicICE, or from Mixed-sequences using the provided code. Also contains a table with sequence acquisition times in seconds, relative to injection_time.
+- `code`: Contains scripts and code that were used to extract images or information from the DICOM sourcedata. We strive to keep any code interacting with DICOM-files in this directory, rather than in the python-package, since the source-data is often organized without following any specific convention.
+- `Snakefile`: Snakefile describing workflows with scripts and code in the `code`-folder
+- (Optional) `sourcedata`: DICOM-files. Organized by session according to `sourcedata/sub-[subjectid]/[raw_datelabel]/[raw_sessionlabel]/`. Will potentially be excluded from public dataset.
 
 
-### 6. Concentration estimation
-```bash
-snakemake concentration_estimate --cores [ncores]
-```
+### `data/mri_processed_data`
+The `mri_processed_data`-folder contains information and data which are not organized according to the `BIDS`-format, either due to incompatibility of software, or if another organization greatly simplifies processing.
+It will typically contain the following directories:
+- `freesurfer/sub-[subjectid]`: Output of Freesurfer's `recon-all` for given subject.
+- `sub-[subjectid]`: Folder for processed data for the given subject, such as registered images, concentration-estimates meshes and statistics.
+
+
+Note that the `snakemake`-files in `workflows_additional` specifies workflows by desired outputs, necessary inputs, and shell command to be executed in a relatively easy to read format. Consulting these files might answer several questions regarding the expected structure.
