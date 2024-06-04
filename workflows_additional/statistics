@@ -1,7 +1,7 @@
 rule segment_refinements:
   input:
-    reference="data/mri_processed_data/T1maps/{subject}_ses-01_T1map_hybrid.nii.gz",
-    segmentation="data/mri_processed_data/freesufer/{subject}/mri/aparc+aseg.mgz",
+    reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
+    segmentation="data/mri_processed_data/freesurfer/{subject}/mri/aparc+aseg.mgz",
     csfmask="data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
   output:
     refined="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
@@ -17,9 +17,9 @@ rule segment_refinements:
 
 rule LookLocker_stats:
     input:
-      data="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map_hybrid.nii.gz",
+      data="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
       segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
-      timestamps="data/mri_dataset/derivatives/timetable.csv",
+      timestamps="data/mri_dataset/timetable.csv",
       lutfile="data/mri_processed_data/freesurfer_lut.json"
     output:
       "data/mri_processed_data/{subject}/statistics/{subject}_{session}_LookLocker_statstable.csv"
@@ -52,7 +52,7 @@ rule T1w_stats:
     input:
       data="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.nii.gz",
       segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
-      timestamps="data/mri_dataset/derivatives/timetable.csv",
+      timestamps="data/mri_dataset/timetable.csv",
       lutfile="data/mri_processed_data/freesurfer_lut.json"
     output:
       "data/mri_processed_data/{subject}/statistics/{subject}_{session}_T1w_statstable.csv"
@@ -67,13 +67,76 @@ rule T1w_stats:
       " --lutfile {input.lutfile}"
       " --output {output}"
 
+rule mixed_stats:
+    input:
+      data="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
+      segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
+      timestamps="data/mri_dataset/timetable.csv",
+      lutfile="data/mri_processed_data/freesurfer_lut.json"
+    output:
+      "data/mri_processed_data/{subject}/statistics/{subject}_{session}_mixed_statstable.csv"
+    shell:
+      "python gmri2fem/analysis/region_quantities.py"
+      " --subjectid {wildcards.subject}"
+      " --subject_session {wildcards.session}"
+      " --sequence mixed"
+      " --data {input.data}"
+      " --seg {input.segmentation}"
+      " --timestamps {input.timestamps}"
+      " --lutfile {input.lutfile}"
+      " --output {output}"
+
+
+rule concentration_tissue_stats:
+    input:
+      data="data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz",
+      segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
+      timestamps="data/mri_dataset/timetable.csv",
+      lutfile="data/mri_processed_data/freesurfer_lut.json"
+    output:
+      "data/mri_processed_data/{subject}/statistics/{subject}_{session}_concentration_statstable.csv"
+    shell:
+      "python gmri2fem/analysis/region_quantities.py"
+      " --subjectid {wildcards.subject}"
+      " --subject_session {wildcards.session}"
+      " --sequence concentrations"
+      " --timestamp_sequence LookLocker"
+      " --data {input.data}"
+      " --seg {input.segmentation}"
+      " --timestamps {input.timestamps}"
+      " --lutfile {input.lutfile}"
+      " --output {output}"
+
+
+rule concentration_csf_stats:
+    input:
+      data="data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz",
+      segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
+      timestamps="data/mri_dataset/timetable.csv",
+      lutfile="data/mri_processed_data/freesurfer_lut.json"
+    output:
+      "data/mri_processed_data/{subject}/statistics/{subject}_{session}_concentration_csf_statstable.csv"
+    shell:
+      "python gmri2fem/analysis/region_quantities.py"
+      " --subjectid {wildcards.subject}"
+      " --subject_session {wildcards.session}"
+      " --sequence concentrations_csf"
+      " --timestamp_sequence mixed"
+      " --data {input.data}"
+      " --seg {input.segmentation}"
+      " --timestamps {input.timestamps}"
+      " --lutfile {input.lutfile}"
+      " --output {output}"
+
+
+
 
 rule collected:
   input:
     expand(
       "data/mri_processed_data/{{subject}}/statistics/{{subject}}_{session}_{sequence}_statstable.csv",
       session=SESSIONS,
-      sequence=["LookLocker", "T1w"]
+      sequence=["LookLocker", "T1w", "mixed", "concentration", "concentration_csf"]
     )
   output:
     "data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv",
@@ -81,5 +144,4 @@ rule collected:
     "python gmri2fem/analysis/concat_tables.py"
     " --input {input}"
     " --output {output}"
-
 

@@ -1,55 +1,41 @@
-rule recon_all_base:
-    input:
-        t1="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_T1w_conformed.mgz",
-    output:
-        protected(directory("data/mri_processed_data/freesurfer/{subject}/")),
-    resources:
-        time="24:00:00",
-    shadow:
-        config["shadow"]
-    shell:
-        "recon-all"
-        " -sd 'data/mri_processed_data/freesurfer'"
-        " -s {wildcards.subject}"
-        " -i {input.t1}"
-        " -all"
+rule create_lutfile:
+  output:
+    "data/mri_processed_data/freesurfer_lut.json"
+  shell:
+    "python scripts/create_freesurfer_lut.py"
+
+
+rule recon_all_setup:
+  input:
+    t1="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+    FLAIR="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_FLAIR.nii.gz"
+  output:
+    t1="data/mri_processed_data/freesurfer/{subject}/mri/orig/001.mgz",
+    FLAIR="data/mri_processed_data/freesurfer/{subject}/mri/orig/FLAIRraw.mgz"
+  shell:
+    "mri_convert {input.t1} {output.t1} && "
+    "mri_convert --no_scale 1 {input.FLAIR} {output.FLAIR}"
 
 
 rule recon_all_FLAIR:
-    input:
-        t1="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_T1w_conformed.mgz",
-        FLAIR="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_FLAIR_conformed.mgz",
-    output:
-        protected(directory("freesurfer/{subject}_FLAIR/")),
-    resources:
-        time="48:00:00",
-    shadow:
-        config["shadow"]
-    shell:
-        "recon-all"
-        " -sd 'freesurfer'"
-        " -s {wildcards.subject}_FLAIR"
-        " -i {input.t1}"
-        " -FLAIR {input.FLAIR}"
-        " -FLAIRpial"
-        " -all"
-
-
-rule recon_all_T2w:
-    input:
-        t1="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_T1w_conformed.mgz",
-        t2="data/mri_processed_data/{subject}/conformed/{subject}_ses-01_T2w_conformed.mgz",
-    output:
-        protected(directory("freesurfer/{subject}_T2w/")),
-    resources:
-        time="96:00:00",
-    shadow:
-        config["shadow"]
-    shell:
-        "recon-all"
-        " -sd 'freesurfer'"
-        " -s {wildcards.subject}_T2w"
-        " -i {input.t1}"
-        " -T2 {input.t2}"
-        " -T2pial"
-        " -all"
+  input:
+    t1="data/mri_processed_data/freesurfer/{subject}/mri/orig/001.mgz",
+    FLAIR="data/mri_processed_data/freesurfer/{subject}/mri/orig/FLAIRraw.mgz"
+  output:
+    segmentations=protected(expand(
+      "data/mri_processed_data/freesurfer/{{subject}}/mri/{seg}.mgz",
+      seg=["aparc+aseg", "aseg", "wmparc"]
+    )),
+    surfs=protected(expand(
+      "data/mri_processed_data/freesurfer/{{subject}}/surf/{surf}",
+      surf=["lh.pial", "rh.pial", "lh.white", "rh.white"]
+    ))
+  resources:
+    time="48:00:00",
+  shell:
+    "recon-all"
+    " -sd $(realpath $(dirname {output.segmentations[0]})/../../)"
+    " -s {wildcards.subject}"
+    " -FLAIR {input.FLAIR}"
+    " -FLAIRpial"
+    " -all"

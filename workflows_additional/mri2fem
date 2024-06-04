@@ -1,0 +1,44 @@
+rule mri2fenics:
+    input:
+        meshfile="data/mri_processed_data/{subjectid}/modeling/resolution{res}/mesh.hdf",
+        timestamps="data/mri_processed_data/{subjectid}/timestamps_LL.txt",
+        concentrations=expand(
+          "data/mri_processed_data/{{subjectid}}/concentrations/{{subjectid}}_{session}_concentration_LL.mgz",
+          session=SESSIONS
+        )
+    output:
+        hdf="data/mri_processed_data/{subjectid}/modeling/resolution{res}/data.hdf",
+        visual="data/mri_processed_data/{subjectid}/modeling/resolution{res}/visual/data.xdmf",
+    shell:
+        "python gmri2fem/mriprocessing/mri2fenics.py"
+        " --mris {input.concentrations}"
+        " --mesh_hdf {input.meshfile}"
+        " --output_hdf {output.hdf}"
+        " --timestamps {input.timestamps}"
+
+
+rule fenics2mri_workflow:
+   input:
+       referenceimage="data/mri_processed_data/freesurfer/{subjectid}/mri/T1.mgz",
+       simulationfile="data/mri_processed_data/{subject}/modelingn/resolution{res}/{funcname}.hdf",
+       timestampfile="data/{subjectid}/timestamps_LL.txt",
+   output:
+       "data/{subjectid}/MODELING/resolution{res}/MRIs/{funcname}_{idx}.nii.gz",
+   shell:
+       "python gmri2fem/mriprocessing/fenics2mri.py"
+       " --simulationfile {input.simulationfile}"
+       " --output {output}"
+       " --referenceimage {input.referenceimage}"
+       " --timestamps {input.timestampfile}"
+       " --timeidx {wildcards.idx}"
+       " --functionname 'total_concentration'"
+
+
+rule fenics2mri_pseudoinverse:
+   input:
+       expand(
+           "data/{subjectid}/MODELING/resolution{res}/MRIs/data_{idx}.nii.gz",
+           subjectid=config["subjects"],
+           res=config["resolution"],
+           idx=range(5)
+       )

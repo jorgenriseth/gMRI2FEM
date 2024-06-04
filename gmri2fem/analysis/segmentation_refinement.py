@@ -106,7 +106,7 @@ if __name__ == "__main__":
     upsampled_seg = seg_upsampling(args.reference, args.fs_seg)
     csf_mask = nifti1.load(args.csfmask)
     csf_seg = csf_segmentation(upsampled_seg, csf_mask)
-    nifti1.save(csf_seg, args.output_seg)
+    nifti1.save(csf_seg, args.output_csfseg)
 
     refined_seg = segmentation_refinement(upsampled_seg, csf_seg)
-    nifti1.save(refined_seg, args.output_csfseg)
+    nifti1.save(refined_seg, args.output_seg)

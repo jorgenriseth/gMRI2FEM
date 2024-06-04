@@ -155,16 +155,29 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inputdir", type=Path, required=True)
+    parser.add_argument("--inputfile", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--threshold_number", type=int, default=0)
     parser.add_argument("--T1_low", type=int, default=50)
     parser.add_argument("--T1_hi", type=int, default=5000)
+    parser.add_argument("--postprocessed", type=Path)
+    parser.add_argument("--R1", type=Path)
+    parser.add_argument("--R1_postprocessed", type=Path)
     args = parser.parse_args()
+    inputdir = args.inputfile.parent
 
-    T1map_nii = estimate_t1map(args.inputdir, args.threshold_number)
+    T1map_nii = estimate_t1map(inputdir, args.threshold_number)
     nibabel.nifti1.save(T1map_nii, args.output)
 
-    postprocess_T1map(
-        T1map_nii, args.T1_low, args.T1_hi, radius=10, erode_dilate_factor=1.3
-    )
+    if args.postprocessed is not None:
+        postprocessed = postprocess_T1map(
+            T1map_nii, args.T1_low, args.T1_hi, radius=10, erode_dilate_factor=1.3
+        )
+        nibabel.nifti1.save(postprocessed, args.postprocessed)
+        if args.R1_postprocessed is not None:
+            R1_post = T1_to_R1(T1map_nii)
+            nibabel.nifti1.save(R1_post, args.R1_postprocessed)
+
+    if args.R1 is not None:
+        R1 = T1_to_R1(T1map_nii)
+        nibabel.nifti1.save(R1, args.R1)

@@ -38,7 +38,7 @@ def read_timetable(
         index_col=0,
     )
     subject_sequence_entries = (dframe["subject"] == subjectid) & (
-        dframe["SequenceLabel"] == sequence_label
+        dframe["sequence_label"] == sequence_label
     )
     acq_times = dframe[subject_sequence_entries]["acquisition_relative_injection"]
     return np.array(acq_times)

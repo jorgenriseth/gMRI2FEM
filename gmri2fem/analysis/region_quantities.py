@@ -26,6 +26,7 @@ def create_dataframe(
     subject: str,
     session: str,
     sequence: str,
+    timestamp_sequence: str,
     mri_path: Path,
     seg_path: Path,
     lut_path: Path,
@@ -46,9 +47,9 @@ def create_dataframe(
     }
 
     data = nifti1.load(mri_path).get_fdata(dtype=np.single)
-    timetable = pd.read_csv(timestamps_path, index_col=0)
+    timetable = pd.read_csv(timestamps_path)
     timestamp = timetable.loc[
-        (timetable["SequenceLabel"] == sequence)
+        (timetable["sequence_label"] == timestamp_sequence)
         & (timetable["subject"] == subject)
         & (timetable["session"] == session)
     ]["acquisition_relative_injection"].item()
@@ -105,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument("--subjectid", type=str, required=True)
     parser.add_argument("--subject_session", type=str, required=True)
     parser.add_argument("--sequence", type=str, required=True)
+    parser.add_argument("--timestamp_sequence", type=str)
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--seg", type=Path, required=True)
     parser.add_argument("--timestamps", type=Path, required=True)
@@ -112,10 +114,13 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
+    if args.timestamp_sequence is None:
+        args.timestamp_sequence = args.sequence
     dframe = create_dataframe(
         subject=args.subjectid,
         session=args.subject_session,
         sequence=args.sequence,
+        timestamp_sequence=args.timestamp_sequence,
         mri_path=args.data,
         seg_path=args.seg,
         lut_path=args.lutfile,

@@ -1,7 +1,7 @@
 rule concentration_estimate:
     input:
-        image="data/mri_processed_data/{subject}/T1map_hybrid/{subject}_{session}_T1map_hybrid.nii.gz",
-        reference="data/mri_processed_data/{subject}/T1map_hybrid/{subject}_ses-01_T1map_hybrid.nii.gz",
+        image="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
+        reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
     output:
         "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz"
     shell:
@@ -80,3 +80,28 @@ rule concentration_estimate_T1w:
         " --input {input.image}"
         " --reference {input.reference}"
         " --output {output}"
+
+rule extract_concentration_times_T1w:
+   input:
+       timetable="data/mri_dataset/timetable.csv"
+   output:
+       "data/mri_processed_data/{subject}/timestamps_T1w.txt",
+   shell:
+       "python gmri2fem/mriprocessing/extract_timestamps.py"
+       " --timetable {input}"
+       " --subject {wildcards.subject}"
+       " --sequence_label T1w"
+       " --output {output}"
+
+
+rule extract_concentration_times_LL:
+   input:
+       timetable="data/mri_dataset/timetable.csv"
+   output:
+       "data/mri_processed_data/{subject}/timestamps_LL.txt"
+   shell:
+       "python gmri2fem/mriprocessing/extract_timestamps.py"
+       " --timetable {input}"
+       " --subject {wildcards.subject}"
+       " --sequence_label LookLocker"
+       " --output {output}"
