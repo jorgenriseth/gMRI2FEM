@@ -3,11 +3,9 @@ cluster:
   sbatch 
     --output="jobs/{rule}/slurm_%x_%j.out"
     --error="jobs/{rule}/log_%x_%j.log"
-    --account={resources.account}
     --mem={resources.mem_mb}
     --time={resources.time}
 default-resources:
-  - account=nn9279k
   - mem_mb='32G'
   - time='10:00:00'
   - slurm_extra="--qos devel"
