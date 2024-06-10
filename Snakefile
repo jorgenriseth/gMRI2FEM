@@ -31,7 +31,7 @@ SESSIONS=[f"ses-{i+1:02d}" for i in range(config["num_sessions"])]
 rule all:
   input:
     expand(
-      "data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv"
+      "data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv",
       subject=config["subjects"],
     )
 

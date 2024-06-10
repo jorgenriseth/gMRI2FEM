@@ -37,8 +37,6 @@ rule create_mesh:
         "data/mri_processed_data/{subjectid}/modeling/resolution{res}/mesh.hdf",
     resources:
         time="00:30:00",
-    shadow:
-        config["shadow"]
     shell:
         "python gmri2fem/mriprocessing/mesh_generation.py"
         " --surfaces {input}"
