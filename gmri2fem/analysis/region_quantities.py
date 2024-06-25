@@ -48,11 +48,16 @@ def create_dataframe(
 
     data = nifti1.load(mri_path).get_fdata(dtype=np.single)
     timetable = pd.read_csv(timestamps_path)
-    timestamp = timetable.loc[
-        (timetable["sequence_label"] == timestamp_sequence)
-        & (timetable["subject"] == subject)
-        & (timetable["session"] == session)
-    ]["acquisition_relative_injection"].item()
+    try:
+        timestamp = timetable.loc[
+            (timetable["sequence_label"] == timestamp_sequence)
+            & (timetable["subject"] == subject)
+            & (timetable["session"] == session)
+        ]["acquisition_relative_injection"]
+        timestamp = timestamp.item()
+    except ValueError as e:
+        print(timetable)
+        raise e
 
     regions_stat_functions = {
         "mean": np.mean,

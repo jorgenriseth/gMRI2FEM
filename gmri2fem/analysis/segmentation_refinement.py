@@ -17,11 +17,9 @@ def seg_upsampling(
     seg_mgz = mghformat.load(segmentation)
     seg = seg_mgz.get_fdata(dtype=np.single).astype(np.int32)
 
-    T1map_nii = nifti1.load(reference)
-    T1map = T1map_nii.get_fdata(dtype=np.single)
-
+    reference_nii = nifti1.load(reference)
     shape_in = seg.shape
-    shape_out = T1map.shape
+    shape_out = reference_nii.shape
 
     upsampled_inds = np.fromiter(
         itertools.product(*(np.arange(ni) for ni in shape_out)),
@@ -29,9 +27,9 @@ def seg_upsampling(
     )
 
     seg_affine = seg_mgz.affine
-    T1map_affine = T1map_nii.affine
+    reference_affine = reference_nii.affine
     seg_inds = apply_affine(
-        np.linalg.inv(seg_affine), apply_affine(T1map_affine, upsampled_inds)
+        np.linalg.inv(seg_affine), apply_affine(reference_affine, upsampled_inds)
     )
     seg_inds = np.rint(seg_inds).astype(np.int32)
 
@@ -44,9 +42,9 @@ def seg_upsampling(
     I_in, J_in, K_in = seg_inds.T
     I_out, J_out, K_out = upsampled_inds.T
 
-    seg_upsampled = np.zeros(T1map.shape)
+    seg_upsampled = np.zeros(shape_out)
     seg_upsampled[I_out, J_out, K_out] = seg[I_in, J_in, K_in]
-    return nifti1.Nifti1Image(seg_upsampled, T1map_affine)
+    return nifti1.Nifti1Image(seg_upsampled, reference_affine)
 
 
 def csf_segmentation(
@@ -101,12 +99,22 @@ if __name__ == "__main__":
     parser.add_argument("--csfmask", type=Path, required=True)
     parser.add_argument("--output_seg", type=Path, required=True)
     parser.add_argument("--output_csfseg", type=Path, required=True)
+    parser.add_argument("--intracranial_mask", type=Path)
     args = parser.parse_args()
 
-    upsampled_seg = seg_upsampling(args.reference, args.fs_seg)
     csf_mask = nifti1.load(args.csfmask)
+    upsampled_seg = seg_upsampling(args.reference, args.fs_seg)
     csf_seg = csf_segmentation(upsampled_seg, csf_mask)
     nifti1.save(csf_seg, args.output_csfseg)
 
     refined_seg = segmentation_refinement(upsampled_seg, csf_seg)
     nifti1.save(refined_seg, args.output_seg)
+
+    if args.intracranial_mask is not None:
+        csf_mask_data = csf_mask.get_fdata().astype(bool)
+        refined_seg_data = refined_seg.get_fdata().astype(bool)
+        intracranial = csf_mask_data + (refined_seg_data != 0)
+        intracranial_nii = nifti1.Nifti1Image(
+            intracranial.astype(np.single), refined_seg.affine
+        )
+        nifti1.save(intracranial_nii, args.intracranial_mask)

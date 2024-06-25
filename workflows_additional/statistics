@@ -1,11 +1,12 @@
 rule segment_refinements:
   input:
-    reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
+    reference="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1w_registered.nii.gz",
     segmentation="data/mri_processed_data/freesurfer/{subject}/mri/aparc+aseg.mgz",
     csfmask="data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
   output:
     refined="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
-    csf_segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz"
+    csf_segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
+    intracranial_mask="data/mri_processed_data/{subject}/{subject}_mask-intracranial.nii.gz"
   shell:
     "python gmri2fem/analysis/segmentation_refinement.py"
     " --fs_seg {input.segmentation}"
@@ -13,7 +14,63 @@ rule segment_refinements:
     " --csfmask {input.csfmask}"
     " --output_seg {output.refined}"
     " --output_csfseg {output.csf_segmentation}"
+    " --intracranial_mask {output.intracranial_mask}"
 
+
+rule T1w_sig_diff_stats:
+    input:
+      data="data/mri_processed_data/{subject}/T1w_signal_difference/{subject}_{session}_T1w_signal-difference.nii.gz",
+      segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
+      timestamps="data/mri_dataset/timetable.csv",
+      lutfile="data/mri_processed_data/freesurfer_lut.json"
+    output:
+      "data/mri_processed_data/{subject}/statistics/{subject}_{session}_T1w-sigdiff_statstable.csv"
+    shell:
+      "python gmri2fem/analysis/region_quantities.py"
+      " --subjectid {wildcards.subject}"
+      " --subject_session {wildcards.session}"
+      " --sequence T1w-sig-diff"
+      " --timestamp_sequence T1w"
+      " --data {input.data}"
+      " --seg {input.segmentation}"
+      " --timestamps {input.timestamps}"
+      " --lutfile {input.lutfile}"
+      " --output {output}"
+
+
+rule T1w_sig_diff_csf_stats:
+    input:
+      data="data/mri_processed_data/{subject}/T1w_signal_difference/{subject}_{session}_T1w_signal-difference.nii.gz",
+      segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
+      timestamps="data/mri_dataset/timetable.csv",
+      lutfile="data/mri_processed_data/freesurfer_lut.json"
+    output:
+      "data/mri_processed_data/{subject}/statistics/{subject}_{session}_T1w-sigdiff-csf_statstable.csv"
+    shell:
+      "python gmri2fem/analysis/region_quantities.py"
+      " --subjectid {wildcards.subject}"
+      " --subject_session {wildcards.session}"
+      " --sequence T1w-sig-diff-csf"
+      " --timestamp_sequence T1w"
+      " --data {input.data}"
+      " --seg {input.segmentation}"
+      " --timestamps {input.timestamps}"
+      " --lutfile {input.lutfile}"
+      " --output {output}"
+
+
+rule T1w_sigdiff_collected:
+  input:
+    expand(
+      "data/mri_processed_data/{{subject}}/statistics/{{subject}}_{session}_T1w-sigdiff_statstable.csv",
+      session=SESSIONS
+    )
+  output:
+    "data/mri_processed_data/{subject}/statistics/{subject}_T1w-sigdiff_statstable.csv",
+  shell:
+    "python gmri2fem/analysis/concat_tables.py"
+    " --input {input}"
+    " --output {output}"
 
 rule LookLocker_stats:
     input:
@@ -136,7 +193,7 @@ rule collected:
     expand(
       "data/mri_processed_data/{{subject}}/statistics/{{subject}}_{session}_{sequence}_statstable.csv",
       session=SESSIONS,
-      sequence=["LookLocker", "T1w", "mixed", "concentration", "concentration_csf"]
+      sequence=["LookLocker", "T1w", "mixed", "concentration", "concentration_csf", "T1w-sigdiff", "T1w-sigdiff-csf"]
     )
   output:
     "data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv",
