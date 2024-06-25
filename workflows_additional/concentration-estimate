@@ -1,39 +1,53 @@
 rule concentration_estimate:
-    input:
-        image="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
-        reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
-    output:
-        "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz"
-    shell:
-        "python gmri2fem/mriprocessing/estimate_concentration.py"
-        " --input {input.image}"
-        " --reference {input.reference}"
-        " --output {output}"
-        " --r1 0.0045"
+  input:
+    image="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
+    reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
+  output:
+    "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz"
+  shell:
+    "python gmri2fem/mriprocessing/estimate_concentration.py"
+      " --input {input.image}"
+      " --reference {input.reference}"
+      " --output {output}"
+      " --r1 0.0045"
 
+# rule grow_refroi:
+#   input:
+#     seed="data/mri_processed_data/{subject}/{subject}_refroi_seed.mgz",
+#     references=expand(
+#       "data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.mgz",
+#       session=SESSIONS
+#     )
+#   output:
+#     "data/mri_processed_data/{subject}/{subject}_refroi.mgz",
+#   shell:
+#     "python gmri2fem/mriprocessing/grow_refroi.py"
+#       " --seed {input.seed}"
+#       " --references {input.references}"
+#       " --output {output}"
 
-rule grow_refroi:
-    input:
-        seed="data/mri_processed_data/{subject}/{subject}_refroi_seed.mgz",
-        references=expand(
-            "data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.mgz",
-            session=SESSIONS
-        )
-    output:
-        "data/mri_processed_data/{subject}/{subject}_refroi.mgz",
-    shell:
-        "python gmri2fem/mriprocessing/grow_refroi.py"
-        " --seed {input.seed}"
-        " --references {input.references}"
-        " --output {output}"
+rule create_refroi:
+  input: 
+    T1w = lambda wc: [
+      f"data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.nii.gz"
+      for session in SESSIONS#[wc.subject]
+    ],
+    segmentation= "data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
+  output:
+    "data/mri_processed_data/{subject}/{subject}_refroi-left-orbital.nii.gz",
+  shell:
+    "python gmri2fem/mriprocessing/orbital_refroi.py"
+      " --T1w_dir $(dirname '{input.T1w[0]}')"
+      " --segmentation {input.segmentation}"
+      " --output {output}"
 
 
 rule normalize_T1w:
     input:
-        image="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.mgz",
-        refroi="data/mri_processed_data/{subject}/{subject}_refroi.mgz",
+        image="data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.nii.gz",
+        refroi="data/mri_processed_data/{subject}/{subject}_refroi-left-orbital.nii.gz",
     output:
-        "data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.mgz"
+        "data/mri_processed_data/{subject}/T1w_normalized/{subject}_{session}_T1w_normalized.nii.gz"
     shell:
         "python gmri2fem/mriprocessing/normalize_images.py"
         " --image {input.image}"

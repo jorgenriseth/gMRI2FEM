@@ -40,12 +40,14 @@ module preprocessing:
   prefix: "data/mri_dataset"
   config: config
 
-use rule * from preprocessing as preprocessing_*
+#use rule * from preprocessing as preprocessing_*
 
 include: "workflows_additional/register"
 include: "workflows_additional/recon-all"
 include: "workflows_additional/T1maps"
+include: "workflows_additional/T1w_signal_intensities"
 include: "workflows_additional/concentration-estimate"
 include: "workflows_additional/statistics"
 include: "workflows_additional/mesh-generation"
 include: "workflows_additional/mri2fem"
+include: "workflows_additional/dti"

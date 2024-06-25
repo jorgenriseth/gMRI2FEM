@@ -5,8 +5,8 @@ import numpy as np
 
 
 def normalize_image(image_path: Path, refroi_path: Path, outputpath: Path) -> Path:
-    image = nibabel.freesurfer.mghformat.load(image_path)
-    refroi = nibabel.freesurfer.mghformat.load(refroi_path)
+    image = nibabel.nifti1.load(image_path)
+    refroi = nibabel.nifti1.load(refroi_path)
 
     assert np.allclose(
         refroi.affine, image.affine
@@ -15,10 +15,8 @@ def normalize_image(image_path: Path, refroi_path: Path, outputpath: Path) -> Pa
     ref_mask = refroi.get_fdata().astype(bool)
 
     normalized_image_data = image_data / np.median(image_data[ref_mask])
-    normalized_image = nibabel.freesurfer.mghformat.MGHImage(
-        normalized_image_data, image.affine
-    )
-    nibabel.freesurfer.mghformat.save(normalized_image, outputpath)
+    normalized_image = nibabel.nifti1.Nifti1Image(normalized_image_data, image.affine)
+    nibabel.nifti1.save(normalized_image, outputpath)
     return outputpath
 
 
