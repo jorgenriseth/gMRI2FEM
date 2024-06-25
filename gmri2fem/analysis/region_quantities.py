@@ -11,7 +11,7 @@ from gmri2fem.analysis.seg_groups import default_segmentation_groups
 # Intervals used to group the T1mapvarying timestamps of different subjects
 # together. Intervals are given in hours, and data gets the label 't{i}'
 # i.e. t=4.5h -> 't1', t=23.2h -> 't2', and so on.
-SESSION_INTERVALS = [(0, 0), (2, 6), (20, 28), (45, 52), (68, 72)]
+SESSION_INTERVALS = [(0, 0), (2, 6), (20, 28), (45, 52), (68, 80)]
 
 
 def timestamp_session_idx(t: float) -> int:
@@ -20,6 +20,27 @@ def timestamp_session_idx(t: float) -> int:
         if interval[0] <= t / 3600 <= interval[1]:
             return idx + 1
     raise ValueError(f"Timestamp {t}s={t/3600:.2f}h is not in any session intervals")
+
+
+def find_timestamp(
+    timetable_path: Path, timestamp_sequence: str, subject: str, session: str
+) -> float:
+    try:
+        timetable = pd.read_csv(timetable_path)
+    except pd.errors.EmptyDataError:
+        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
+
+    try:
+        timestamp = timetable.loc[
+            (timetable["sequence_label"] == timestamp_sequence)
+            & (timetable["subject"] == subject)
+            & (timetable["session"] == session)
+        ]["acquisition_relative_injection"]
+    except ValueError as e:
+        print(timetable)
+        print(timestamp_sequence, subject, session)
+        raise e
+    return timestamp.item()
 
 
 def create_dataframe(
@@ -48,16 +69,7 @@ def create_dataframe(
 
     data = nifti1.load(mri_path).get_fdata(dtype=np.single)
     timetable = pd.read_csv(timestamps_path)
-    try:
-        timestamp = timetable.loc[
-            (timetable["sequence_label"] == timestamp_sequence)
-            & (timetable["subject"] == subject)
-            & (timetable["session"] == session)
-        ]["acquisition_relative_injection"]
-        timestamp = timestamp.item()
-    except ValueError as e:
-        print(timetable)
-        raise e
+    timestamp = find_timestamp(timestamps_path, timestamp_sequence, subject, session)
 
     regions_stat_functions = {
         "mean": np.mean,
