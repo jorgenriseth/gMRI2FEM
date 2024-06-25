@@ -1,9 +1,4 @@
-rule T1w_register_greedy:
-  input:
-    fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
-    moving="data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_T1w.nii.gz"
-  output:
-    transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat"
+rule register:
   threads: 12
   shell:
     "greedy -d 3 -a" 
@@ -14,139 +9,95 @@ rule T1w_register_greedy:
     " -m NCC 5x5x5"
     " -threads {threads}"
 
-
-rule T1w_reslice_greedy:
-    input:
-      fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
-      moving="data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_T1w.nii.gz",
-      transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat"
-    output:
-      "data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.nii.gz",
-    shell:
-      "greedy -d 3"
-      " -rf {input.fixed}"
-      " -rm {input.moving} {output}"
-      " -r {input.transform}"
+rule reslice:
+  shell:
+    "greedy -d 3"
+    " -rf {input.fixed}"
+    " -rm {input.moving} {output}"
+    " -r {input.transform}"
 
 
-rule T1map_to_T1w0_register_greedy:
+# T1w
+use rule register as register_T1w with:
+  input:
+    fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+    moving="data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_T1w.nii.gz"
+  output:
+    "data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat"
+
+
+use rule reslice as reslice_T1w with:
+  input:
+    fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+    moving="data/mri_dataset/{subject}/{session}/anat/{subject}_{session}_T1w.nii.gz",
+    transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_T1w.mat"
+  output:
+    "data/mri_processed_data/{subject}/registered/{subject}_{session}_T1w_registered.nii.gz",
+
+
+# LL
+use rule register as register_T1map_LL with:
   input:
     fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
     moving="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_R1map_postprocessed.nii.gz"
   output:
     transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-looklocker_to-T1w0.mat"
-  threads: 12
-  shell:
-    "greedy -d 3 -a" 
-    " -i {input.fixed} {input.moving}"
-    " -o {output}"
-    " -ia-image-centers"
-    " -dof 6"
-    " -m NCC 5x5x5"
-    " -threads {threads}"
 
 
-rule T1map_to_T1w0_reslice_greedy:
-    input:
-      fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
-      moving="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_T1map_postprocessed.nii.gz",
-      transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-looklocker_to-T1w0.mat",
-    output:
-      "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-looklocker_T1map_registered.nii.gz",
-    shell:
-      "greedy -d 3"
-      " -rf {input.fixed}"
-      " -rm {input.moving} {output}"
-      " -r {input.transform}"
+use rule reslice as reslice_T1map_LL with:
+  input:
+    fixed="data/mri_dataset/{subject}/ses-01/anat/{subject}_ses-01_T1w.nii.gz",
+    moving="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-looklocker_T1map_postprocessed.nii.gz",
+    transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-looklocker_to-T1w0.mat",
+  output:
+    "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-looklocker_T1map_registered.nii.gz",
 
 
-rule Mixed_SE_to_SE0_register:
+# Mixed
+use rule register as register_SE_to_SE0 with:
   input:
     fixed="data/mri_dataset/{subject}/ses-01/mixed/{subject}_ses-01_acq-mixed_SE-modulus.nii.gz",
     moving="data/mri_dataset/{subject}/{session}/mixed/{subject}_{session}_acq-mixed_SE-modulus.nii.gz"
   output:
-    transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-mixed_to-mixed0.mat"
-  threads: 12
-  shell:
-    "greedy -d 3 -a" 
-    " -dof 6"
-    " -i {input.fixed} {input.moving}"
-    " -o {output}"
-    " -ia-image-centers"
-    " -m NCC 5x5x5"
-    " -threads {threads}"
+    "data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-mixed_to-mixed0.mat"
 
 
-rule Mixed_SE_to_SE0_reslice:
+use rule reslice as reslice_SE_to_SE0 with:
   input:
     fixed="data/mri_dataset/{subject}/ses-01/mixed/{subject}_ses-01_acq-mixed_SE-modulus.nii.gz",
     moving="data/mri_dataset/{subject}/{session}/mixed/{subject}_{session}_acq-mixed_SE-modulus.nii.gz",
     transform="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-mixed_to-mixed0.mat"
   output:
     "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_to-mixed0_SE-modulus.nii.gz",
-  threads: 12
-  shell:
-    "greedy -d 3"
-    " -rf {input.fixed}"
-    " -rm {input.moving} {output}"
-    " -r {input.transform}"
 
 
-rule Mixed_SE0_to_LL0_register:
+use rule register as register_SE0_to_LL0 with:
   input:
     fixed="data/mri_processed_data/{subject}/registered/{subject}_ses-01_acq-looklocker_T1map_registered.nii.gz",
     moving="data/mri_dataset/{subject}/ses-01/mixed/{subject}_ses-01_acq-mixed_SE-modulus.nii.gz",
   output:
-    transform="data/mri_processed_data/{subject}/transforms/{subject}_ses-01_acq-mixed_to-looklocker.mat"
-  threads: 12
-  shell:
-    "greedy -d 3 -a" 
-    " -dof 6"
-    " -i {input.fixed} {input.moving}"
-    " -o {output}"
-    " -ia-image-centers"
-    " -m NCC 5x5x5"
-    " -threads {threads}"
+    "data/mri_processed_data/{subject}/transforms/{subject}_ses-01_acq-mixed_to-looklocker.mat"
 
 
-rule Mixed_SE_to_T1w0_reslice:
+use rule reslice as reslice_SE with:
   input: 
     fixed="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1w_registered.nii.gz",
     moving="data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_to-mixed0_SE-modulus.nii.gz",
     transform="data/mri_processed_data/{subject}/transforms/{subject}_ses-01_acq-mixed_to-looklocker.mat"
   output:
     "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_SE-modulus_registered.nii.gz"
-  shell:
-    "greedy -d 3"
-    " -rf {input.fixed}"
-    " -rm {input.moving} {output}"
-    " -r {input.transform}"
 
 
-rule Mixed_T1map_to_T1w0_reslice:
+rule reslice_T1map_mixed:
   input: 
     fixed="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1w_registered.nii.gz",
     moving="data/mri_dataset/derivatives/{subject}/{session}/{subject}_{session}_acq-mixed_T1map.nii.gz",
     transform_bimodal="data/mri_processed_data/{subject}/transforms/{subject}_ses-01_acq-mixed_to-looklocker.mat",
     transform_temporal="data/mri_processed_data/{subject}/transforms/{subject}_{session}_acq-mixed_to-mixed0.mat"
   output:
-    "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_T1map_registered.nii.gz",
+    "data/mri_processed_data/{subject}/registered/{subject}_{session}_acq-mixed_T1map_registered.nii.gz"
   shell:
     "greedy -d 3"
     " -rf {input.fixed}"
     " -rm {input.moving} {output}"
     " -r {input.transform_bimodal} {input.transform_temporal}"
-
-# TODO: Remove as masking is now taken care of after registeration
-# rule Mixed_mask_to_T1w0_reslice:
-#   input: 
-#     fixed="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1w_registered.nii.gz",
-#     moving="data/mri_dataset/derivatives/{subject}/ses-01/anat/{subject}_ses-01_mask-mixed.nii.gz",
-#     transform_bimodal="data/mri_processed_data/{subject}/transforms/{subject}_ses-01_mixed-to-ll.mat",
-#   output:
-#     "data/mri_processed_data/{subject}/registered/{subject}_ses-01_mask-mixed_registered.nii.gz"
-#   shell:
-#     "greedy -d 3"
-#     " -rf {input.fixed}"
-#     " -rm {input.moving} {output}"
-#     " -r {input.transform_bimodal}"
