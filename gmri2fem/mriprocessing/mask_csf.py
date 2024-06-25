@@ -22,6 +22,7 @@ def create_csf_mask(
     csf_mask = se > cutoff
     csf_mask = largest_island(csf_mask)
     csf_mask = skimage.morphology.remove_small_holes(csf_mask)
+    csf_mask = skimage.morphology.binary_erosion(csf_mask)
     csf_mask_nii = nifti1.Nifti1Image(csf_mask, se_mri.affine, header=se_mri.header)
     return csf_mask_nii
 
