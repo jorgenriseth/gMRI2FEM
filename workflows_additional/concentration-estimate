@@ -30,7 +30,7 @@ rule create_refroi:
   input: 
     T1w = lambda wc: [
       f"data/mri_processed_data/{{subject}}/registered/{{subject}}_{session}_T1w_registered.nii.gz"
-      for session in SESSIONS#[wc.subject]
+      for session in SESSIONS[wc.subject]
     ],
     segmentation= "data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
   output:

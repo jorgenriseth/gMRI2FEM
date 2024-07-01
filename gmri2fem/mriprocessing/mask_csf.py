@@ -12,27 +12,25 @@ def largest_island(mask: np.ndarray, connectivity: int = 1) -> np.ndarray:
     return newmask == regions[0].label
 
 
-def create_csf_mask(
-    se0_path: Path,
-    cutoff_percent: float = 25,
-) -> nifti1.Nifti1Image:
-    se_mri = nifti1.load(se0_path)
-    se = se_mri.get_fdata()
-    cutoff = (cutoff_percent / 100.0) * np.quantile(se, 0.999)
-    csf_mask = se > cutoff
-    csf_mask = largest_island(csf_mask)
-    csf_mask = skimage.morphology.remove_small_holes(csf_mask)
-    csf_mask = skimage.morphology.binary_erosion(csf_mask)
-    csf_mask_nii = nifti1.Nifti1Image(csf_mask, se_mri.affine, header=se_mri.header)
-    return csf_mask_nii
+def create_csf_mask(vol: np.ndarray, connectivity: int = 2):
+    (hist, bins) = np.histogram(vol[vol > 0], bins=512)
+    thresh = skimage.filters.threshold_yen(vol, hist=(hist, bins))
+    binary = vol > thresh
+    binary = largest_island(binary, connectivity=2)
+    return binary
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--se", type=Path, required=True)
+    parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--connectivity", type=int, default=2)
     args = parser.parse_args()
-    nii = create_csf_mask(args.se, cutoff_percent=25)
-    nifti1.save(nii, args.output)
+
+    nii = nifti1.load(args.input)
+    vol = nii.get_fdata(dtype=np.single)
+    mask = create_csf_mask(vol, args.connectivity)
+    mask_nii = nifti1.Nifti1Image(mask.astype(np.uint8), nii.affine)
+    nifti1.save(mask_nii, args.output)

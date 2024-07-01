@@ -34,6 +34,11 @@ else:
   SUBJECTS = [p.stem for p in Path("data/mri_dataset/sourcedata").glob("sub-*")]
   config["subjects"] = SUBJECTS
 
+if "ignore_subjects" in config:
+  for subject in config["ignore_subjects"]:
+    SUBJECTS.remove(subject)
+  config["subjects"] = SUBJECTS
+
 SESSIONS = {
   subject: sorted([p.stem for p in Path(f"data/mri_dataset/sourcedata/{subject}").glob("ses-*")])
   for subject in SUBJECTS
@@ -57,7 +62,7 @@ module preprocessing:
 #use rule * from preprocessing as preprocessing_*
 
 include: "workflows_additional/register"
-include: "workflows_additional/recon-all"
+# include: "workflows_additional/recon-all"
 include: "workflows_additional/T1maps"
 include: "workflows_additional/T1w_signal_intensities"
 include: "workflows_additional/concentration-estimate"

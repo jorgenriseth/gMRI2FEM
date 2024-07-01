@@ -18,12 +18,12 @@ rule T1map_estimation_from_LL:
 
 rule csfmask:
   input:
-    "data/mri_processed_data/{subject}/registered/{subject}_ses-01_acq-mixed_SE-modulus_registered.nii.gz",
+    "data/mri_processed_data/{subject}/registered/{subject}_ses-01_T2w_registered.nii.gz",
   output:
     "data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
   shell:
     "python gmri2fem/mriprocessing/mask_csf.py"
-    " --se {input}"
+    " --input {input}"
     " --output {output}"
 
 

@@ -9,13 +9,17 @@ import skimage
 
 from gmri2fem.utils import apply_affine
 
+MASK_DTYPE = np.uint8
+SEG_DTYPE = np.int16
+DATA_DTYPE = np.single
+
 
 def seg_upsampling(
     reference: Path,
     segmentation: Path,
 ):
     seg_mgz = mghformat.load(segmentation)
-    seg = seg_mgz.get_fdata(dtype=np.single).astype(np.int32)
+    seg = np.asanyarray(seg_mgz.dataobj, dtype=SEG_DTYPE)
 
     reference_nii = nifti1.load(reference)
     shape_in = seg.shape
@@ -31,7 +35,7 @@ def seg_upsampling(
     seg_inds = apply_affine(
         np.linalg.inv(seg_affine), apply_affine(reference_affine, upsampled_inds)
     )
-    seg_inds = np.rint(seg_inds).astype(np.int32)
+    seg_inds = np.rint(seg_inds).astype(SEG_DTYPE)
 
     # The two images does not necessarily share field of view.
     # Remove voxels which are not located within the segmentation fov.
@@ -42,7 +46,7 @@ def seg_upsampling(
     I_in, J_in, K_in = seg_inds.T
     I_out, J_out, K_out = upsampled_inds.T
 
-    seg_upsampled = np.zeros(shape_out)
+    seg_upsampled = np.zeros(shape_out, dtype=SEG_DTYPE)
     seg_upsampled[I_out, J_out, K_out] = seg[I_in, J_in, K_in]
     return nifti1.Nifti1Image(seg_upsampled, reference_affine)
 
@@ -51,17 +55,17 @@ def csf_segmentation(
     seg_upsampled_mri: nifti1.Nifti1Image,
     csf_mask_mri: nifti1.Nifti1Image,
 ) -> nifti1.Nifti1Image:
-    seg_upsampled = seg_upsampled_mri.get_fdata(dtype=np.single).astype(np.int32)
+    seg_upsampled = np.asanyarray(seg_upsampled_mri.dataobj, dtype=SEG_DTYPE)
     I, J, K = np.where(seg_upsampled != 0)
     inds = np.array([I, J, K]).T
     interp = scipy.interpolate.NearestNDInterpolator(inds, seg_upsampled[I, J, K])
 
-    csf_mask = csf_mask_mri.get_fdata(dtype=np.single).astype(bool)
+    csf_mask = np.asanyarray(csf_mask_mri.dataobj, dtype=bool)
     i, j, k = np.where(csf_mask)
 
     csf_seg = np.zeros_like(seg_upsampled)
     csf_seg[i, j, k] = interp(i, j, k)
-    return nifti1.Nifti1Image(csf_seg, csf_mask_mri.affine, header=csf_mask_mri.header)
+    return nifti1.Nifti1Image(csf_seg, csf_mask_mri.affine)
 
 
 def segmentation_refinement(
@@ -69,14 +73,14 @@ def segmentation_refinement(
     csf_segmentation: nifti1.Nifti1Image,
     closing_radius: int = 5,
 ) -> nifti1.Nifti1Image:
-    seg_upsampled = upsampled_segmentation.get_fdata(dtype=np.single).astype(np.int32)
+    seg_upsampled = np.asanyarray(upsampled_segmentation.dataobj, dtype=SEG_DTYPE)
 
     combined_segmentation = seg_upsampled.copy()
     combined_segmentation = skimage.segmentation.expand_labels(
         combined_segmentation, distance=3
     )
-    csf_seg = csf_segmentation.get_fdata(dtype=np.single).astype(np.int32)
-    csf_mask = (csf_seg != 0).astype(bool)
+    csf_seg = np.asanyarray(csf_segmentation.dataobj, dtype=SEG_DTYPE)
+    csf_mask = csf_seg != 0
     combined_segmentation[csf_mask] = -csf_seg[csf_mask]
 
     radius = closing_radius

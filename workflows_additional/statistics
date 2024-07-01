@@ -1,11 +1,12 @@
 rule segment_refinements:
   input:
-    reference="data/mri_processed_data/{subject}/T1w_registered/{subject}_ses-01_T1w_registered.nii.gz",
+    reference="data/mri_processed_data/{subject}/registered/{subject}_ses-01_T1w_registered.nii.gz",
     segmentation="data/mri_processed_data/freesurfer/{subject}/mri/aparc+aseg.mgz",
     csfmask="data/mri_processed_data/{subject}/{subject}_csfmask.nii.gz",
   output:
     refined="data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
-    csf_segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz"
+    csf_segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
+    mask="data/mri_processed_data/{subject}/{subject}_mask-intracranial.nii.gz",
   shell:
     "python gmri2fem/analysis/segmentation_refinement.py"
     " --fs_seg {input.segmentation}"
@@ -13,6 +14,7 @@ rule segment_refinements:
     " --csfmask {input.csfmask}"
     " --output_seg {output.refined}"
     " --output_csfseg {output.csf_segmentation}"
+    " --intracranial_mask {output.mask}"
 
 
 rule mri_region_stats:
@@ -60,7 +62,7 @@ use rule mri_region_stats as T1w_stats with:
 
 use rule mri_region_stats as mixed_stats with:
     input:
-      data="data/mri_processed_data/{subject}/T1map/{subject}_{session}_T1map.nii.gz",
+      data="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
       segmentation="data/mri_processed_data/{subject}/{subject}_aparc+aseg_csfseg.nii.gz",
       timestamps="data/mri_dataset/timetable.csv",
       lutfile="data/mri_processed_data/freesurfer_lut.json"
