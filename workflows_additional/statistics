@@ -124,6 +124,7 @@ use rule mri_region_stats as T1w_csf_signal_differences_stats with:
       sequence="T1w-signal-difference",
       timestamp_sequence="T1w"
 
+
 rule sequence_stats_collected:
   input:
     lambda wc: [
