@@ -9,14 +9,13 @@ import numpy as np
 import scipy
 import skimage
 import tqdm
-from loguru import logger
 from scipy.optimize import OptimizeWarning
 
 from gmri2fem.utils import nan_filter_gaussian, mri_facemask
 
 
 def f(t, x1, x2, x3):
-    return np.abs(x1 * (1.0 - (1.1 + x2**2) * np.exp(-(x3**2) * t)))
+    return np.abs(x1**2 * (1.0 - (1.1 + x2**2) * np.exp(-(x3**2) * t)))
 
 
 @np.errstate(divide="raise", invalid="raise", over="raise")
@@ -55,27 +54,6 @@ def parse_looklocker_path(
     if raise_error:
         raise ValueError(f"Pattern {pattern} not found in {p}")
     return None
-
-
-def load_time_and_data(ll_dir):
-    match_groups = [
-        mgroup
-        for mgroup in map(
-            parse_looklocker_path,
-            ll_dir.glob("sub-*_ses-*_acq-looklocker_IRT1_t*[0-9].nii.gz"),
-        )
-        if mgroup is not None
-    ]
-    sub, ses = match_groups[0][0], match_groups[0][1]
-    t_labels = sorted([float(g[2]) for g in match_groups])
-    t_data = np.array(t_labels, dtype=np.single) / 1000.0
-    lls = [
-        ll_dir / f"sub-{sub}_ses-{ses}_acq-looklocker_IRT1_t{int(ti)}.nii.gz"
-        for ti in t_labels
-    ]
-    affine = nibabel.nifti1.load(lls[0]).affine
-    D = np.array([nibabel.nifti1.load(ll).get_fdata(dtype=np.single) for ll in lls])
-    return {"time": t_data, "data": D, "affine": affine}
 
 
 def estimate_t1map(
@@ -143,6 +121,10 @@ def postprocess_T1map(
     outliers = np.logical_or(T1map < T1_lo, T1_hi < T1map)
     print("Removing", outliers.sum(), f"voxels outside the range ({T1_lo}, {T1_hi}).")
     T1map[outliers] = np.nan
+    if np.isfinite(T1map).sum() / T1map.size < 0.01:
+        raise RuntimeError(
+            "After outlier removal, less than 1% of the image is left. Check image units."
+        )
 
     # Fill internallly missing values
     fill_mask = np.isnan(T1map) * mask
@@ -162,7 +144,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inputfile", type=Path, required=True)
+    parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--timestamps", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--T1_low", type=int, default=150)
     parser.add_argument("--T1_hi", type=int, default=5500)
@@ -170,25 +153,23 @@ if __name__ == "__main__":
     parser.add_argument("--R1", type=Path)
     parser.add_argument("--R1_postprocessed", type=Path)
     args = parser.parse_args()
-    inputdir = args.inputfile.parent
 
-    data_dict = load_time_and_data(inputdir)
-    T1map_nii = estimate_t1map(
-        data_dict["time"], data_dict["data"], data_dict["affine"]
-    )
+    LL_nii = nibabel.nifti1.load(args.input)
+    time = np.loadtxt(args.timestamps) / 1000
+    D = LL_nii.get_fdata(dtype=np.single).transpose(3, 0, 1, 2)
+    T1map_nii = estimate_t1map(time, D, LL_nii.affine)
     nibabel.nifti1.save(T1map_nii, args.output)
-    mask = mri_facemask(data_dict["data"][0])
+
     if args.R1 is not None:
         R1 = T1_to_R1(T1map_nii)
         nibabel.nifti1.save(R1, args.R1)
 
     if args.postprocessed is not None:
+        mask = mri_facemask(D[0])
         postprocessed = postprocess_T1map(
             T1map_nii,
             args.T1_low,
             args.T1_hi,
-            radius=10,
-            erode_dilate_factor=1.3,
             mask=mask,
         )
         nibabel.nifti1.save(postprocessed, args.postprocessed)

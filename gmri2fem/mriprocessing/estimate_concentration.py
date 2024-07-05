@@ -35,11 +35,11 @@ if __name__ == "__main__":
     data = volume.get_fdata(dtype=np.single)
 
     if args.mask is not None:
-        mask = nibabel.freesurfer.mghformat.load(args.mask)
+        mask_nii = nibabel.nifti1.load(args.mask)
         assert np.allclose(
-            reference_affine, mask.affine
+            reference_affine, mask_nii.affine
         ), "Affine transformations differ, are you sure the baseline and T1 Map are registered properly?"
-        mask = mask.get_fdata(dtype=np.single).astype(bool)
+        mask = np.asanyarray(mask_nii.dataobj, dtype=bool)
         reference_data *= mask
         data *= mask
     else:

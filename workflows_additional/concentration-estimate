@@ -2,6 +2,7 @@ rule concentration_estimate:
   input:
     image="data/mri_processed_data/{subject}/T1maps/{subject}_{session}_T1map.nii.gz",
     reference="data/mri_processed_data/{subject}/T1maps/{subject}_ses-01_T1map.nii.gz",
+    mask="data/mri_processed_data/{subject}/{subject}_mask-intracranial.nii.gz"
   output:
     "data/mri_processed_data/{subject}/concentrations/{subject}_{session}_concentration.nii.gz"
   shell:
@@ -10,6 +11,7 @@ rule concentration_estimate:
       " --reference {input.reference}"
       " --output {output}"
       " --r1 0.0045"
+      " --mask {input.mask}"
 
 # rule grow_refroi:
 #   input:
@@ -117,5 +119,5 @@ rule extract_concentration_times_LL:
        "python gmri2fem/mriprocessing/extract_timestamps.py"
        " --timetable {input}"
        " --subject {wildcards.subject}"
-       " --sequence_label LookLocker"
+       " --sequence_label looklocker"
        " --output {output}"

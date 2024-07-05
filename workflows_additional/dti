@@ -1,6 +1,6 @@
 rule dt_recon:
   input:
-    dti="data/mri_dataset/{subject}/ses-01/dwi/dti.nii.gz",
+    dti="data/mri_dataset/{subject}/ses-01/dwi/dti.mgz",
     bvals="data/mri_dataset/{subject}/ses-01/dwi/dti.bvals",
     bvecs="data/mri_dataset/{subject}/ses-01/dwi/dti.scanner_space.bvecs"
   output:

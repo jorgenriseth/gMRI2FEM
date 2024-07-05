@@ -12,11 +12,16 @@ def largest_island(mask: np.ndarray, connectivity: int = 1) -> np.ndarray:
     return newmask == regions[0].label
 
 
-def create_csf_mask(vol: np.ndarray, connectivity: int = 2):
-    (hist, bins) = np.histogram(vol[vol > 0], bins=512)
-    thresh = skimage.filters.threshold_yen(vol, hist=(hist, bins))
-    binary = vol > thresh
-    binary = largest_island(binary, connectivity=2)
+def create_csf_mask(vol: np.ndarray, connectivity: int = 2, use_li: bool = False):
+    if use_li:
+        thresh = skimage.filters.threshold_li(vol)
+        binary = vol > thresh
+        binary = largest_island(binary, connectivity=2)
+    else:
+        (hist, bins) = np.histogram(vol[vol > 0], bins=512)
+        thresh = skimage.filters.threshold_yen(vol, hist=(hist, bins))
+        binary = vol > thresh
+        binary = largest_island(binary, connectivity=2)
     return binary
 
 
