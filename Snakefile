@@ -51,6 +51,16 @@ rule all:
     stats = [
         f"data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv"
         for subject in SUBJECTS
+    ],
+    dti = [
+        f"data/mri_processed_data/{subject}/modeling/resolution{res}/dti.hdf"
+        for subject in SUBJECTS
+        for res in config["resolution"]
+    ],
+    boundary_data = [
+        f"data/mri_processed_data/{subject}/modeling/resolution{res}/data.hdf"
+        for subject in SUBJECTS
+        for res in config["resolution"]
     ]
 
 
@@ -62,7 +72,7 @@ module preprocessing:
 #use rule * from preprocessing as preprocessing_*
 
 include: "workflows_additional/register"
-# include: "workflows_additional/recon-all"
+#include: "workflows_additional/recon-all"
 include: "workflows_additional/T1maps"
 include: "workflows_additional/T1w_signal_intensities"
 include: "workflows_additional/concentration-estimate"

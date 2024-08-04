@@ -27,7 +27,7 @@ if __name__ == "__main__":
         reference_volume = nibabel.nifti1.load(args.reference)
 
     reference_affine = reference_volume.affine
-    reference_data = reference_volume.get_fdata(dtype=np.float32)
+    reference_data = reference_volume.get_fdata(dtype=np.single)
 
     assert np.allclose(
         reference_affine, volume.affine

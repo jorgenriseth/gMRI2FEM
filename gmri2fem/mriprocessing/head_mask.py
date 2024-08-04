@@ -5,7 +5,7 @@ from pathlib import Path
 from gmri2fem.utils import mri_facemask
 
 
-if __name__ == "__main__"
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -13,8 +13,8 @@ if __name__ == "__main__"
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-# args.input = Path("data/mri_dataset/sub-01/ses-01/anat/sub-01_ses-01_T1w.nii.gz")
-# args.output = Path("testmask.nii.gz")
+    # args.input = Path("data/mri_dataset/sub-01/ses-01/anat/sub-01_ses-01_T1w.nii.gz")
+    # args.output = Path("testmask.nii.gz")
 
     nii = nifti1.load(args.input)
     vol = nii.get_fdata(dtype=np.single)

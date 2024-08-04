@@ -8,19 +8,6 @@ from tqdm import tqdm
 
 from gmri2fem.analysis.seg_groups import default_segmentation_groups
 
-# Intervals used to group the T1mapvarying timestamps of different subjects
-# together. Intervals are given in hours, and data gets the label 't{i}'
-# i.e. t=4.5h -> 't1', t=23.2h -> 't2', and so on.
-SESSION_INTERVALS = [(0, 0), (2, 6), (20, 28), (45, 52), (68, 80)]
-
-
-def timestamp_session_idx(t: float) -> int:
-    """Get the index of the session corresponding to the given timestamp."""
-    for idx, interval in enumerate(SESSION_INTERVALS):
-        if interval[0] <= t / 3600 <= interval[1]:
-            return idx + 1
-    raise ValueError(f"Timestamp {t}s={t/3600:.2f}h is not in any session intervals")
-
 
 def find_timestamp(
     timetable_path: Path, timestamp_sequence: str, subject: str, session: str
@@ -68,7 +55,6 @@ def create_dataframe(
     }
 
     data = nifti1.load(mri_path).get_fdata(dtype=np.single)
-    timetable = pd.read_csv(timestamps_path)
     timestamp = find_timestamp(timestamps_path, timestamp_sequence, subject, session)
 
     regions_stat_functions = {
@@ -82,11 +68,6 @@ def create_dataframe(
     }
 
     timestamp = max(0, timestamp)
-    # In case subject missed a session, the session_idx might not represent the
-    # corresponding session for the rest of the subjects. Therefore, identify
-    # session-idx based on timestamp and interval instead.
-    session_idx = timestamp_session_idx(timestamp)
-
     records = []
     for name, labels in tqdm(regions.items()):
         regions_data = data[np.isin(seg, labels)]
@@ -101,7 +82,7 @@ def create_dataframe(
                 "FS_LUT-region": name,
                 "FS_LUT-voxelcount": seg[np.isin(seg, labels)].size,
                 "subject": subject,
-                "session": f"ses-{session_idx:02d}",
+                "session": session,
                 "sequence": sequence,
                 "time": timestamp,
                 "region_total": np.sum(regions_data),

@@ -37,11 +37,9 @@ def read_image(
     functionspace: df.FunctionSpace,
     datafilter: Optional[Callable[[np.ndarray], np.ndarray]] = None,
 ) -> df.Function:
-    mri_volume = nibabel.freesurfer.mghformat.load(filename)
+    mri_volume = nibabel.nifti1.load(filename)
     voxeldata = mri_volume.get_fdata(dtype=np.single)
-    return mri2fem_interpolate(
-        voxeldata, mri_volume.header.get_vox2ras(), functionspace, datafilter
-    )
+    return mri2fem_interpolate(voxeldata, mri_volume.affine, functionspace, datafilter)
 
 
 def fenicsstorage2xdmf(
@@ -77,10 +75,10 @@ if __name__ == "__main__":
     outfile = FenicsStorage(str(args.output_hdf), "w")
     outfile.write_domain(domain)
     for ti, ci in zip(timestamps, concentration_data):
-        mri_volume = nibabel.freesurfer.mghformat.load(ci)
+        mri_volume = nibabel.nifti1.load(ci)
         voxeldata = mri_volume.get_fdata(dtype=np.single)
         c_data_fenics = mri2fem_interpolate(
-            voxeldata, mri_volume.header.get_vox2ras(), V, datafilter=datafilter
+            voxeldata, mri_volume.affine, V, datafilter=datafilter
         )
         outfile.write_checkpoint(c_data_fenics, name="total_concentration", t=ti)
     outfile.close()

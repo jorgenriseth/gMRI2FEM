@@ -37,11 +37,18 @@ rule create_refroi:
     segmentation= "data/mri_processed_data/{subject}/{subject}_aparc+aseg_refined.nii.gz",
   output:
     "data/mri_processed_data/{subject}/{subject}_refroi-left-orbital.nii.gz",
+    "data/mri_processed_data/{subject}/{subject}_refroi-right-orbital.nii.gz",
   shell:
     "python gmri2fem/mriprocessing/orbital_refroi.py"
       " --T1w_dir $(dirname '{input.T1w[0]}')"
       " --segmentation {input.segmentation}"
-      " --output {output}"
+      " --output {output[0]}"
+      " --side 'left' && "
+    "python gmri2fem/mriprocessing/orbital_refroi.py"
+      " --T1w_dir $(dirname '{input.T1w[0]}')"
+      " --segmentation {input.segmentation}"
+      " --output {output[1]}"
+      " --side 'right'"
 
 
 rule normalize_T1w:

@@ -135,7 +135,7 @@ def postprocess_T1map(
     return nibabel.nifti1.Nifti1Image(T1map, T1map_mri.affine)
 
 
-def T1_to_R1(T1map_mri: nibabel.nifti1.Nifti1Image):
+def T1_to_R1(T1map_mri: nibabel.nifti1.Nifti1Image, scale: float = 1000):
     T1map = T1map_mri.get_fdata(dtype=np.single)
     return nibabel.nifti1.Nifti1Image(1000 / T1map, T1map_mri.affine)
 
