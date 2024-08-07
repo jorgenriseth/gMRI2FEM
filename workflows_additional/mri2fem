@@ -2,10 +2,10 @@ rule mri2fenics:
     input:
         meshfile="data/mri_processed_data/{subjectid}/modeling/resolution{res}/mesh.hdf",
         timestamps="data/mri_processed_data/{subjectid}/timestamps_LL.txt",
-        concentrations=expand(
-          "data/mri_processed_data/{{subjectid}}/concentrations/{{subjectid}}_{session}_concentration_LL.mgz",
-          session=SESSIONS
-        )
+        concentrations= lambda wc: [
+          f"data/mri_processed_data/{{subjectid}}/concentrations/{{subjectid}}_{session}_concentration.nii.gz"
+          for session in SESSIONS[wc.subjectid]
+        ]
     output:
         hdf="data/mri_processed_data/{subjectid}/modeling/resolution{res}/data.hdf",
         visual="data/mri_processed_data/{subjectid}/modeling/resolution{res}/visual/data.xdmf",

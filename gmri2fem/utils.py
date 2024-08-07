@@ -7,6 +7,7 @@ from itertools import chain, repeat
 from multiprocessing.pool import Pool
 from pathlib import Path
 from typing import Iterator
+import skimage
 
 import numpy as np
 import pydicom
@@ -191,3 +192,12 @@ def nan_filter_gaussian(
     out = np.nan * np.zeros_like(U)
     out[mask] = VV[mask] / WW[mask]
     return out
+
+
+def mri_facemask(vol: np.ndarray, smoothing_level=5):
+    thresh = skimage.filters.threshold_triangle(vol)
+    binary = vol > thresh
+    binary = sp.ndimage.binary_fill_holes(binary)
+    binary = skimage.filters.gaussian(binary, sigma=smoothing_level)
+    binary = binary > skimage.filters.threshold_isodata(binary)
+    return binary

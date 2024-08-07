@@ -11,7 +11,7 @@ def normalize_image(image_path: Path, refroi_path: Path, outputpath: Path) -> Pa
     assert np.allclose(
         refroi.affine, image.affine
     ), "Poor match between reference and image-transform."
-    image_data = image.get_fdata(dtype=np.float32)
+    image_data = image.get_fdata(dtype=np.single)
     ref_mask = refroi.get_fdata().astype(bool)
 
     normalized_image_data = image_data / np.median(image_data[ref_mask])

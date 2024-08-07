@@ -32,10 +32,8 @@ def timestamps(subject, timestamp_file, t1_files):
 def read_timetable(
     timetable_path: Path, subjectid: str, sequence_label: str
 ) -> np.ndarray:
-    print(timetable_path, subjectid, sequence_label)
     dframe = pd.read_csv(
         timetable_path,
-        index_col=0,
     )
     subject_sequence_entries = (dframe["subject"] == subjectid) & (
         dframe["sequence_label"] == sequence_label
