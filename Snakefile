@@ -7,22 +7,13 @@ shell.executable("bash")
 
 configfile: "snakeconfig.yaml"
 
-if workflow.use_singularity:
+if DeploymentMethod.APPTAINER in workflow.deployment_settings.deployment_method:
   shell.prefix(
     "set -eo pipefail; "
     + "source /opt/conda/etc/profile.d/conda.sh && "
     + "conda activate $CONDA_ENV_NAME && "
     #    + "ls -l && "
   )
-
-# To enable local scratch disks on clusters.
-# Not sure if works properly.
-if workflow.run_local:
-    workflow._shadow_prefix = os.environ.get("LOCALSCRATCH")
-
-if workflow._shadow_prefix is not None:
-  shadow_directive = "full"
-
 
 wildcard_constraints:
   session = "ses-\d{2}"
@@ -36,7 +27,8 @@ else:
 
 if "ignore_subjects" in config:
   for subject in config["ignore_subjects"]:
-    SUBJECTS.remove(subject)
+    if subject in SUBJECTS:
+      SUBJECTS.remove(subject)
   config["subjects"] = SUBJECTS
 
 SESSIONS = {
@@ -46,38 +38,14 @@ SESSIONS = {
 config["sessions"] = SESSIONS
 
 
-rule all:
-  input:
-    stats = [
-        f"data/mri_processed_data/{subject}/statistics/{subject}_statstable.csv"
-        for subject in SUBJECTS
-    ],
-    dti = [
-        f"data/mri_processed_data/{subject}/modeling/resolution{res}/dti.hdf"
-        for subject in SUBJECTS
-        for res in config["resolution"]
-    ],
-    boundary_data = [
-        f"data/mri_processed_data/{subject}/modeling/resolution{res}/data.hdf"
-        for subject in SUBJECTS
-        for res in config["resolution"]
-    ]
-
-
-module preprocessing:
-  snakefile: "data/mri_dataset/Snakefile"
-  prefix: "data/mri_dataset"
-  config: config
-
-#use rule * from preprocessing as preprocessing_*
-
-include: "workflows_additional/register"
-#include: "workflows_additional/recon-all"
-include: "workflows_additional/T1maps"
-include: "workflows_additional/T1w_signal_intensities"
-include: "workflows_additional/concentration-estimate"
-include: "workflows_additional/statistics"
-include: "workflows_additional/mesh-generation"
-include: "workflows_additional/mri2fem"
-include: "workflows_additional/dti"
+include: "workflows/T1maps"
+include: "workflows/register"
+#include: "workflows/recon-all"
+include: "workflows/T1w_signal_intensities"
+include: "workflows/concentration-estimate"
+include: "workflows/statistics"
+include: "workflows/mesh-generation"
+include: "workflows/mri2fem"
+include: "workflows/dti"
+include: "workflows/snakefile-modeling"
 
