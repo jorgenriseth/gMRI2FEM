@@ -13,7 +13,7 @@ cd [.../]miniforge3/envs/
 mkdir env_name
 tar xvfz yourenv.tar.gz -C env_name
 ```
-The environment should now be possible to activate through `conda`/`mamba`.
+The environment should now be possible to activate through `conda`/`mamba`. (Think there are some more details regarding activating. Should find these).
 
 ## Packaging and importing files
 ### Dataset folder

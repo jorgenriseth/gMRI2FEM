@@ -11,7 +11,7 @@ From: singularity/fs-greedy.sif
 
 %post
   DEBIAN_FRONTEND=noninteractive apt-get install -y dcm2niix
-
+  
   # Create environment
   export CONDA_ENV_NAME={{ CONDA_ENV_NAME }}
   echo $CONDA_ENV_NAME
