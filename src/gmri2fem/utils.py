@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 import skimage
 import tqdm
+import re
 
 
 def apply_affine(T: np.ndarray, X: np.ndarray) -> np.ndarray:
@@ -165,3 +166,19 @@ def connectivity_matrix(arr):
 
     K += np.triu(K, k=1).T
     return {"labels": labels, "connectivity": K}
+
+
+def float_string_formatter(x: float, digits):
+    if float(x) == float("inf"):
+        return "inf"
+    return f"{x*10**(-digits):{f'.{digits}e'}}".replace(".", "")
+
+
+def to_scientific(num, decimals):
+    if float(num) == float("inf"):
+        return "\infty"
+    x = f"{float(num):{f'.{decimals}e'}}"
+    m = re.search(r"(\d\.{0,1}\d*)e([\+|\-]\d{2})", x)
+
+    return f"{m.group(1)}\\times10^{{{int(m.group(2))}}}"
+

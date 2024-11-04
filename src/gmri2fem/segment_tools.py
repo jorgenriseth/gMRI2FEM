@@ -57,8 +57,10 @@ def create_lut(
 
 
 def listed_colormap(lut_table: pd.DataFrame) -> mpl.colors.ListedColormap:
-    colors = lut_table.iloc[:, 2:].to_numpy()
-    return mpl.colors.ListedColormap(colors)
+    colors = lut_table[["R", "G", "B", "A"]].values
+    labels = lut_table["label"].values
+    norm = mpl.colors.BoundaryNorm(boundaries=labels - 1 / 2, ncolors=len(labels))
+    return {"cmap": mpl.colors.ListedColormap(colors), "norm": norm}
 
 
 def write_lut(filename: Path | str, table: pd.DataFrame):
@@ -80,7 +82,9 @@ def lut_record(match: re.Match) -> dict[str, str | float]:
     }
 
 
-def read_lut(filename: Path | str):
+def read_lut(filename: Path | str | None) -> pd.DataFrame:
+    if filename is None:
+        filename = Path(os.environ["FREESURFER_HOME"]) / "FreeSurferColorLUT.txt"
     lut_regex = re.compile(
         r"^(?P<label>\d+)\s+(?P<description>[_\da-zA-Z-]+)\s+(?P<R>\d+)\s+(?P<G>\d+)\s+(?P<B>\d+)\s+(?P<A>\d+)"
     )
@@ -157,6 +161,11 @@ def collapse(seg: np.ndarray, relabeling: dict[str, list[int]]) -> np.ndarray:
         segment_mask = np.isin(seg, old_labels)
         newseg[segment_mask] = new_label
     return newseg
+
+
+def inclusions(seg: np.ndarray, old: int, new: int) -> np.ndarray:
+    np.where(old)
+    return seg
 
 
 @click.command(name="collapse")
