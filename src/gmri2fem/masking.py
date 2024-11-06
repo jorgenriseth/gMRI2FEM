@@ -5,7 +5,6 @@ import numpy as np
 import skimage
 from simple_mri import load_mri, save_mri, SimpleMRI, assert_same_space
 
-from gmri2fem.utils import create_csf_mask
 from gmri2fem.utils import largest_island
 
 
@@ -39,5 +38,25 @@ def mask_intracranial(csf_mask: Path, brain_mask: Path, output):
 def mask_csf(input: Path, output: Path, connectivity: int = 2, li: bool = False):
     mri = load_mri(input, np.single)
     mask = create_csf_mask(mri.data, connectivity, li)
-    assert np.max(mask) > 0
+
+    assert np.max(mask) > 0, "Masking failed, no voxels in mask"
     save_mri(SimpleMRI(mask, mri.affine), output, np.uint8)
+
+
+def create_csf_mask(
+    vol: np.ndarray,
+    connectivity: int = 2,
+    use_li: bool = False,
+) -> np.ndarray:
+    if use_li:
+        thresh = skimage.filters.threshold_li(vol)
+        binary = vol > thresh
+        binary = largest_island(binary, connectivity=connectivity)
+    else:
+        (hist, bins) = np.histogram(
+            vol[(vol > 0) * (vol < np.quantile(vol, 0.999))], bins=512
+        )
+        thresh = skimage.filters.threshold_yen(hist=(hist, bins))
+        binary = vol > thresh
+        binary = largest_island(binary, connectivity=connectivity)
+    return binary

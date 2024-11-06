@@ -57,23 +57,6 @@ def largest_island(mask: np.ndarray, connectivity: int = 1) -> np.ndarray:
     return newmask == regions[0].label
 
 
-def create_csf_mask(
-    vol: np.ndarray, connectivity: int = 2, use_li: bool = False
-) -> np.ndarray:
-    if use_li:
-        thresh = skimage.filters.threshold_li(vol)
-        binary = vol > thresh
-        binary = largest_island(binary, connectivity=connectivity)
-    else:
-        (hist, bins) = np.histogram(
-            vol[(vol > 0) * (vol < np.quantile(vol, 0.999))], bins=512
-        )
-        thresh = skimage.filters.threshold_yen(hist=(hist, bins))
-        binary = vol > thresh
-        binary = largest_island(binary, connectivity=connectivity)
-    return binary
-
-
 def grow_restricted(grow, restriction, growth_radius):
     return (
         grow
@@ -181,4 +164,3 @@ def to_scientific(num, decimals):
     m = re.search(r"(\d\.{0,1}\d*)e([\+|\-]\d{2})", x)
 
     return f"{m.group(1)}\\times10^{{{int(m.group(2))}}}"
-
