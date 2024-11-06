@@ -1,5 +1,7 @@
+import re
 from pathlib import Path
 from typing import Optional
+
 
 import click
 import dolfin as df
@@ -157,24 +159,22 @@ def map_concentration(
         )
 
 
+@click.command()
+@click.argument("concentration_paths", type=Path, nargs=-1, required=True)
+@click.option("--meshpath", type=Path, required=True)
+@click.option("--csfmask_path", type=Path, required=True)
+@click.option("--timetable", type=Path, required=True)
+@click.option("--output", type=Path, required=True)
+@click.option("--femfamily", type=str, default="CG")
+@click.option("--femdegree", type=int, default=1)
+@click.option("--visualdir", type=Path)
+def concentrations2mesh(concentration_paths, **kwargs):
+    subject_re = re.compile(r"(?P<subject>sub-(control|patient)*\d{2})")
+    m = subject_re.search(str(concentration_paths[0]))
+    if m is None:
+        raise ValueError(f"Couldn't find subject in path {concentration_paths[0]}")
+    map_concentration(m.groupdict()["subject"], concentration_paths, **kwargs)
+
+
 if __name__ == "__main__":
-    import click
-    import re
-
-    @click.command()
-    @click.argument("concentration_paths", type=Path, nargs=-1, required=True)
-    @click.option("--meshpath", type=Path, required=True)
-    @click.option("--csfmask_path", type=Path, required=True)
-    @click.option("--timetable", type=Path, required=True)
-    @click.option("--output", type=Path, required=True)
-    @click.option("--femfamily", type=str, default="CG")
-    @click.option("--femdegree", type=int, default=1)
-    @click.option("--visualdir", type=Path)
-    def main(concentration_paths, **kwargs):
-        subject_re = re.compile(r"(?P<subject>sub-(control|patient)*\d{2})")
-        m = subject_re.search(str(concentration_paths[0]))
-        if m is None:
-            raise ValueError(f"Couldn't find subject in path {concentration_paths[0]}")
-        map_concentration(m.groupdict()["subject"], concentration_paths, **kwargs)
-
-    main()
+    concentrations2mesh()

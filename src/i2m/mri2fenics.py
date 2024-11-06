@@ -6,9 +6,40 @@ from typing import Callable, Optional
 import dolfin as df
 import nibabel
 import numpy as np
+import scipy
+import simple_mri as sm
 from pantarei import FenicsStorage, hdf2fenics
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
+
+
+def find_dof_nearest_neighbours(
+    dof_inds: np.ndarray, mask: np.ndarray, N: int
+) -> np.ndarray:
+    dof_neighbours = -np.ones((2, N, dof_inds.shape[0]), int)
+    valid_inds = np.argwhere(mask)
+    tree = scipy.spatial.KDTree(valid_inds)
+    distances, indices = tree.query(dof_inds, k=N)
+    dof_neighbours = valid_inds[indices].T
+    return dof_neighbours
+
+
+def find_boundary_dofs(V: df.FunctionSpace) -> np.ndarray:
+    return np.array(
+        [
+            dof
+            for dof in df.DirichletBC(V, df.Constant(0), "on_boundary")
+            .get_boundary_values()
+            .keys()
+        ]
+    )
+
+
+def locate_dof_voxels(V: df.FunctionSpace, mri: sm.SimpleMRI):
+    """Create a list of indices of voxels of an mri for which the dof coordinates
+    of a fenics function space are located within."""
+    dof_coordinates = V.tabulate_dof_coordinates()
+    return np.rint(sm.apply_affine(np.linalg.inv(mri.affine), dof_coordinates)).astype(int)  # fmt: skip
 
 
 def mri2fem_interpolate(

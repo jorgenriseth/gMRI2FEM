@@ -21,10 +21,10 @@ def intracranial_mask(csf_mask: SimpleMRI, segmentation: SimpleMRI):
 
 @click.command()
 @click.option("--csfmask", type=Path, required=True)
-@click.option("--brain_seg", type=Path, required=True)
+@click.option("--brain_seg", "brain_mask", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
-def mask_intracranial(csf_mask: Path, brain_mask: Path, output):
-    csf = load_mri(csf_mask, dtype=bool)
+def mask_intracranial(csfmask: Path, brain_mask: Path, output):
+    csf = load_mri(csfmask, dtype=bool)
     brain = load_mri(brain_mask, dtype=bool)
     intracranial_mask_mri = intracranial_mask(csf, brain)
     save_mri(intracranial_mask_mri, output, dtype=np.uint8)

@@ -23,21 +23,18 @@ SOFTWARE.
 '''
 """
 
-import argparse
+import click
 from pathlib import Path
 
 
 import numpy as np
 import nibabel
 import dolfin as df
+import pantarei as pr
 from ufl import tr, sqrt, inner, dev
-
 from nibabel.affines import apply_affine
 
-import pantarei as pr
-
-from simple_mri import SimpleMRI
-from gmri2fem.clean_dti_data import extend_to_9_component_array
+from dti.clean_dti_data import extend_to_9_component_array
 
 
 def mean_diffusivity(Dvector: np.ndarray) -> np.ndarray:
@@ -71,9 +68,8 @@ def adjusting_mean_diffusivity(Dvector: np.ndarray, subdomains, tags_with_limits
 
 def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
     mesh = df.Mesh()
-    hdf = df.HDF5File(mesh.mpi_comm(), meshfile, "r")
+    hdf = df.HDF5File(mesh.mpi_comm(), str(meshfile), "r")
     hdf.read(mesh, "domain/mesh", False)
-
     d = mesh.topology().dim()
     subdomains = df.MeshFunction("size_t", mesh, d)
     hdf.read(subdomains, "domain/subdomains")
@@ -84,7 +80,6 @@ def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
     dti_image = nibabel.load(dti)
     dti_data = dti_image.get_fdata().squeeze()
     dti_data = extend_to_9_component_array(dti_data)
-    print(dti_data.shape)
 
     vox2ras = dti_image.affine
     ras2vox = np.linalg.inv(vox2ras)
@@ -114,7 +109,7 @@ def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
 
     # Assign the output to the tensor function
     D.vector()[:] = D1.reshape(-1)
-
+    #
     # Compute other functions
     md = 1.0 / 3.0 * tr(D)
     MD = df.project(md, DG0, solver_type="cg", preconditioner_type="amg")
@@ -131,19 +126,14 @@ def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
     hdf.close()
 
 
-if __name__ == "__main__":
-    # TODO: Write about arguments or simplify in the book!
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dti", type=str, default="")
-    parser.add_argument("--mesh", type=str)
-    parser.add_argument("--out", type=str)
-    parser.add_argument(
-        "--label",
-        type=float,
-        action="append",
-        nargs=3,
-        help="--label TAG MIN MAX. The value of zero is considered void.",
-    )
-    Z = parser.parse_args()
+@click.command()
+@click.option("--dti", type=Path)
+@click.option("--mesh", type=Path)
+@click.option("--out", type=Path)
+@click.option("--label", nargs=3, type=int, help="--label TAG MIN MAX")
+def dti2mesh(dti, mesh, out, label):
+    dti_data_to_mesh(mesh, dti, out, label)
 
-    dti_data_to_mesh(Z.mesh, Z.dti, Z.out, Z.label)
+
+if __name__ == "__main__":
+    dti2mesh()

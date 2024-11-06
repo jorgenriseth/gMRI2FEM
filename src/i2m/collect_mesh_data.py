@@ -1,6 +1,7 @@
+import click
 from pathlib import Path
 import dolfin as df
-import pantarei as p
+import pantarei as pr
 
 
 def collect_mesh_data(
@@ -37,3 +38,13 @@ def collect_mesh_data(
     subdomains = df.MeshFunction("size_t", domain, domain.topology().dim())
     parcellation_hdf.read(subdomains, "parcellations")
     hdf.write(subdomains, "parcellations")
+
+
+@click.command()
+@click.option("--domain", "domain_data", type=Path)
+@click.option("--dti_data", type=Path)
+@click.option("--concentration_data", type=Path)
+@click.option("--parcellation_data", type=Path)
+@click.option("--output", type=Path)
+def collect(*args, **kwargs):
+    collect_mesh_data(*args, **kwargs)
