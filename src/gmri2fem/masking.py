@@ -10,13 +10,12 @@ from gmri2fem.utils import largest_island
 
 def intracranial_mask(csf_mask: SimpleMRI, segmentation: SimpleMRI):
     assert_same_space(csf_mask, segmentation)
-    combined_mask = csf_mask.data + (segmentation.data != 0)
-    island = largest_island(combined_mask, connectivity=1)
-    hole_filled = skimage.morphology.binary_closing(island, skimage.morphology.ball(9))
-    hole_filled = skimage.morphology.remove_small_holes(
-        island, area_threshold=1024, connectivity=2
+    combined_mask = csf_mask.data + segmentation.data.astype(bool)
+    background_mask = largest_island(~combined_mask, connectivity=1)
+    opened = skimage.morphology.binary_opening(
+        background_mask, skimage.morphology.ball(3)
     )
-    return SimpleMRI(data=hole_filled, affine=segmentation.affine)
+    return SimpleMRI(data=~opened, affine=segmentation.affine)
 
 
 @click.command()
