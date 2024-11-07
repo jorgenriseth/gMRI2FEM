@@ -10,10 +10,16 @@ import scipy
 import pandas as pd
 import tqdm
 import pantarei as pr
+import skimage
 from pantarei import FenicsStorage, fenicsstorage2xdmf
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
 from simple_mri import load_mri, SimpleMRI
+from i2m.mri2fenics import (
+    locate_dof_voxels,
+    find_boundary_dofs,
+    find_dof_nearest_neighbours,
+)
 
 
 def extract_sequence_timestamps(
@@ -87,33 +93,24 @@ def map_concentration(
     femdegree: int,
     visualdir: Optional[Path] = None,
 ):
+    csf_mask_mri = load_mri(csfmask_path, dtype=bool)
+    csf_mask = skimage.morphology.binary_erosion(
+        csf_mask_mri.data, skimage.morphology.ball(1)
+    )
+
     timestamps = np.maximum(
         0, extract_sequence_timestamps(timetable, subject, "looklocker")
     )
     domain = pr.hdf2fenics(meshpath, pack=True)
     V = df.FunctionSpace(domain, femfamily, femdegree)
-    dof_coordinates = V.tabulate_dof_coordinates()
-    boundary_dofs = np.array(
-        [
-            dof
-            for dof in df.DirichletBC(V, df.Constant(0), "on_boundary")
-            .get_boundary_values()
-            .keys()
-        ]
-    )
-    mask_mri = load_mri(csfmask_path, dtype=bool)
-    mask = mask_mri.data
+
     concentration_mri = load_mri(concentration_paths[0], dtype=np.single)
-    affine = concentration_mri.affine
-    boundary_dof_coordinates = dof_coordinates[boundary_dofs]
-    boundary_inds = np.rint(
-        apply_affine(np.linalg.inv(affine), boundary_dof_coordinates)
-    ).astype(int)
-    i, j, k = boundary_inds.T
+    dof_voxels = locate_dof_voxels(V, concentration_mri)
 
-    inds = np.rint(apply_affine(np.linalg.inv(affine), dof_coordinates)).astype(int)
-    I, J, K = inds.T
-
+    boundary_dofs = find_boundary_dofs(V)
+    boundary_dof_neighbours = find_dof_nearest_neighbours(
+        dof_voxels[boundary_dofs], csf_mask, N=10
+    )
     assert len(concentration_paths) > 0
     assert len(timestamps) == len(concentration_paths)
 
@@ -121,26 +118,25 @@ def map_concentration(
     outfile.write_domain(domain)
     for ti, ci in zip(tqdm.tqdm(timestamps), concentration_paths):
         concentration_mri = load_mri(ci, dtype=np.single)
-        affine = concentration_mri.affine
-
-        boundary_data = np.nan * np.zeros_like(concentration_mri.data)
-        boundary_data[mask] = concentration_mri.data[mask]
-        boundary_data = smooth_extension(
-            boundary_data, boundary_inds, sigma=1, truncate=4, maxiter=3
+        valid_concentrations = np.isfinite(concentration_mri.data)
+        boundary_dof_neighbours = find_dof_nearest_neighbours(
+            dof_voxels[boundary_dofs],
+            csf_mask * valid_concentrations,
+            N=10,
         )
-
         u_boundary = df.Function(V)
-        u_boundary.vector()[boundary_dofs] = boundary_data[i, j, k]
+        u_boundary.vector()[boundary_dofs] = np.nanmedian(
+            concentration_mri.data[*boundary_dof_neighbours], axis=0
+        )
         outfile.write_checkpoint(u_boundary, name="boundary_concentration", t=ti)
 
-        internal_data = np.nan * np.zeros_like(concentration_mri.data)
-        internal_data[~mask] = concentration_mri.data[~mask]
-        internal_data = smooth_extension(
-            internal_data, inds, sigma=1, truncate=4, maxiter=3
+        dof_neighbours = find_dof_nearest_neighbours(
+            dof_voxels, ~csf_mask * valid_concentrations, N=10
         )
-
         u_internal = df.Function(V)
-        u_internal.vector()[:] = internal_data[I, J, K]
+        u_internal.vector()[:] = np.nanmedian(
+            concentration_mri.data[*dof_neighbours], axis=0
+        )
         outfile.write_checkpoint(u_internal, name="concentration", t=ti)
     outfile.close()
 

@@ -4,18 +4,10 @@ import click
 import dolfin as df
 import numpy as np
 import tqdm
-from gmri2fem.concentrations_to_mesh import nearest_neighbour
+from i2m.concentrations_to_mesh import nearest_neighbour
 from simple_mri import load_mri
 from gmri2fem.utils import apply_affine
 from pantarei import read_domain
-
-
-@click.command("subdomains")
-@click.argument("segmentation", type=Path, required=True)
-@click.argument("meshpath", type=Path)
-@click.argument("output", type=Path)
-def main(*args, **kwargs):
-    segments_to_mesh(*args, **kwargs)
 
 
 def segments_to_mesh(
@@ -85,5 +77,13 @@ def adjacent_tag(data, i, j, k, Mmin=3, Mmax=10):
     return 0
 
 
+@click.command("subdomains")
+@click.argument("segmentation", type=Path, required=True)
+@click.argument("meshpath", type=Path)
+@click.argument("output", type=Path)
+def subdomains(*args, **kwargs):
+    segments_to_mesh(*args, **kwargs)
+
+
 if __name__ == "__main__":
-    main()
+    subdomains()

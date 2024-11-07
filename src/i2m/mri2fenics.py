@@ -8,7 +8,7 @@ import nibabel
 import numpy as np
 import scipy
 import simple_mri as sm
-from pantarei import FenicsStorage, hdf2fenics
+from pantarei import FenicsStorage
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
 
@@ -78,44 +78,3 @@ def fenicsstorage2xdmf(
     file = FenicsStorage(filepath, "r")
     file.to_xdmf(funcname, subnames, outputdir)
     file.close()
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mris", nargs="+", type=Path, required=True)
-    parser.add_argument("--mesh_hdf", type=Path, required=True)
-    parser.add_argument("--timestamps_txt", type=Path, required=True)
-    parser.add_argument("--output_hdf", type=Path, required=True)
-    parser.add_argument("--femfamily", type=str, default="CG")
-    parser.add_argument("--femdegree", type=int, default=1)
-    args = parser.parse_args()
-
-    domain = hdf2fenics(args.mesh_hdf, pack=True)
-    V = df.FunctionSpace(domain, args.femfamily, args.femdegree)
-    concentration_data = sorted(args.mris)
-    timestamps = np.loadtxt(args.timestamps_txt)
-
-    assert len(concentration_data) > 0
-    assert len(timestamps) == len(concentration_data)
-
-    datafilter = functools.partial(smooth_extension, sigma=0.5, truncate=6)
-
-    outfile = FenicsStorage(str(args.output_hdf), "w")
-    outfile.write_domain(domain)
-    for ti, ci in zip(timestamps, concentration_data):
-        mri_volume = nibabel.nifti1.load(ci)
-        voxeldata = mri_volume.get_fdata(dtype=np.single)
-        c_data_fenics = mri2fem_interpolate(
-            voxeldata, mri_volume.affine, V, datafilter=datafilter
-        )
-        outfile.write_checkpoint(c_data_fenics, name="total_concentration", t=ti)
-    outfile.close()
-
-    fenicsstorage2xdmf(
-        outfile.filepath,
-        "total_concentration",
-        "total_concentration",
-        lambda _: outfile.filepath.parent / "visual/data.xdmf",
-    )

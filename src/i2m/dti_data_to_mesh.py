@@ -33,8 +33,13 @@ import dolfin as df
 import pantarei as pr
 from ufl import tr, sqrt, inner, dev
 from nibabel.affines import apply_affine
+import simple_mri as sm
 
 from dti.clean_dti_data import extend_to_9_component_array
+from i2m.mri2fenics import (
+    locate_dof_voxels,
+    find_dof_nearest_neighbours,
+)
 
 
 def mean_diffusivity(Dvector: np.ndarray) -> np.ndarray:
@@ -66,59 +71,38 @@ def adjusting_mean_diffusivity(Dvector: np.ndarray, subdomains, tags_with_limits
         )
 
 
-def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
-    mesh = df.Mesh()
-    hdf = df.HDF5File(mesh.mpi_comm(), str(meshfile), "r")
-    hdf.read(mesh, "domain/mesh", False)
-    d = mesh.topology().dim()
-    subdomains = df.MeshFunction("size_t", mesh, d)
-    hdf.read(subdomains, "domain/subdomains")
-    boundaries = df.MeshFunction("size_t", mesh, d - 1)
-    hdf.read(boundaries, "domain/boundaries")
-    hdf.close()
+def dti_data_to_mesh(
+    domain: pr.Domain,
+    dti_mri: sm.SimpleMRI,
+    md_mri: sm.SimpleMRI,
+    fa_mri: sm.SimpleMRI,
+    brain_mask: np.ndarray,
+    output: Path,
+):
+    # Structure tensors as 9-component row-major vectors
+    dti = dti_mri.data.squeeze()
+    dti = extend_to_9_component_array(dti)
+    valid_dti = np.isfinite(dti).all(axis=-1)
+    dti_mask = valid_dti * brain_mask
 
-    dti_image = nibabel.load(dti)
-    dti_data = dti_image.get_fdata().squeeze()
-    dti_data = extend_to_9_component_array(dti_data)
+    DG0 = df.FunctionSpace(domain, "DG", 0)
+    DG09 = df.TensorFunctionSpace(domain, "DG", 0)
 
-    vox2ras = dti_image.affine
-    ras2vox = np.linalg.inv(vox2ras)
+    dof_voxels = locate_dof_voxels(DG0, md_mri)
+    dof_neighbours = find_dof_nearest_neighbours(dof_voxels, dti_mask, N=1)
 
-    # Create a FEniCS tensor field:
-    DG09 = df.TensorFunctionSpace(mesh, "DG", 0)
     D = df.Function(DG09)
+    D.vector()[:] = dti[*dof_neighbours].ravel()
 
-    # Get the coordinates xyz of each degree of freedom
-    DG0 = df.FunctionSpace(mesh, "DG", 0)
-    imap = DG0.dofmap().index_map()
-    num_dofs_local = imap.local_range()[1] - imap.local_range()[0]
-    xyz = DG0.tabulate_dof_coordinates()
-    xyz = xyz.reshape((num_dofs_local, -1))
+    md_mask = (md_mri.data > 1e-5) * brain_mask
+    dof_N_neighbours = find_dof_nearest_neighbours(dof_voxels, md_mask, N=10)
+    MD = df.Function(DG0)
+    MD.vector()[:] = np.median(md_mri.data[*dof_N_neighbours], axis=0)
 
-    # Convert to voxel space and round off to find
-    # voxel indices
-    ijk = apply_affine(ras2vox, xyz).T
-    i, j, k = np.rint(ijk).astype("int")
+    FA = df.Function(DG0)
+    FA.vector()[:] = np.median(fa_mri.data[*dof_N_neighbours], axis=0)
 
-    D1 = dti_data[i, j, k]
-    print(D1.shape)
-
-    # Further manipulate data (described better later)
-    if label:
-        adjusting_mean_diffusivity(D1, subdomains, label)
-
-    # Assign the output to the tensor function
-    D.vector()[:] = D1.reshape(-1)
-    #
-    # Compute other functions
-    md = 1.0 / 3.0 * tr(D)
-    MD = df.project(md, DG0, solver_type="cg", preconditioner_type="amg")
-    fa = sqrt((3.0 / 2.0) * inner(dev(D), dev(D)) / inner(D, D))
-    FA = df.project(fa, DG0)
-
-    # Now store everything to a new file - ready for use!
-    domain = pr.Domain(mesh, subdomains, boundaries)
-    hdf = df.HDF5File(mesh.mpi_comm(), outfile, "w")
+    hdf = df.HDF5File(domain.mpi_comm(), str(output), "w")
     pr.write_domain(hdf, domain)
     pr.write_function(hdf, D, "DTI")
     pr.write_function(hdf, MD, "MD")
@@ -127,12 +111,22 @@ def dti_data_to_mesh(meshfile: Path, dti: Path, outfile: Path, label=None):
 
 
 @click.command()
-@click.option("--dti", type=Path)
-@click.option("--mesh", type=Path)
-@click.option("--out", type=Path)
-@click.option("--label", nargs=3, type=int, help="--label TAG MIN MAX")
-def dti2mesh(dti, mesh, out, label):
-    dti_data_to_mesh(mesh, dti, out, label)
+@click.option("--mesh", type=Path, required=True)
+@click.option("--dti", type=Path, required=True)
+@click.option("--md", type=Path, required=True)
+@click.option("--fa", type=Path, required=True)
+@click.option("--mask", type=Path, required=True)
+@click.option("--output", type=Path, required=True)
+def dti2mesh(mesh: Path, dti: Path, md: Path, fa: Path, mask: Path, output: Path):
+    dti_mri = sm.load_mri(dti, dtype=np.double)
+    md_mri = sm.load_mri(md, dtype=np.double)
+    fa_mri = sm.load_mri(fa, dtype=np.double)
+    mask_mri = sm.load_mri(mask, dtype=bool)
+
+    hdf = df.HDF5File(df.MPI.comm_world, str(mesh), "r")
+    domain = pr.read_domain(hdf)
+    hdf.close()
+    dti_data_to_mesh(domain, dti_mri, md_mri, fa_mri, mask_mri.data, output)
 
 
 if __name__ == "__main__":

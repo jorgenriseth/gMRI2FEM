@@ -23,7 +23,7 @@ def construct_tensor_from_eigs(dti_folder: Path, prefix_pattern: str) -> SimpleM
     valid_mask = np.linalg.det(L) != 0
     Binv = np.zeros_like(B)
     Binv[valid_mask] = np.linalg.inv(B[valid_mask])
-    return SimpleMRI(B @ L @ Binv, eigvec.affine)
+    return SimpleMRI((B @ L @ Binv).reshape(*spatial_shape, 9), eigvec.affine)
 
 
 def construct_tensor_from_vector_array(tensor: SimpleMRI) -> SimpleMRI:
