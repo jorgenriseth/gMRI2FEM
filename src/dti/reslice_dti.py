@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 
 from simple_mri import load_mri, SimpleMRI, save_mri
 
+from gmri2fem.reslice_4d import reslice_4d
+
 
 def construct_tensor_from_eigs(dti_folder: Path, prefix_pattern: str) -> SimpleMRI:
     eigvec = load_mri(dti_folder / f"{prefix_pattern}_V1.nii.gz", np.single)
@@ -56,39 +58,6 @@ def construct_and_save_tensor(
     save_mri(tensor_out, output, dtype=tensor_out.data.dtype)
 
 
-def reslice_4d(
-    inpath: Path,
-    fixed: Path,
-    outpath: Path,
-    transform: Optional[Path] = None,
-    threads: int = 1,
-) -> Path:
-    if transform is None:
-        transform = Path("")
-    nframes = int(
-        subprocess.check_output(
-            f"mri_info --nframes {inpath} | grep -v INFO", shell=True
-        )
-    )
-    with tempfile.TemporaryDirectory(prefix=outpath.stem) as tmpdir:
-        tmppath = Path(tmpdir)
-        for i in range(nframes):
-            tmp_split = tmppath / f"slice{i}.nii.gz"
-            tmp_reslice = tmppath / f"reslice{i}.nii.gz"
-            subprocess.run(
-                f"fslroi {inpath} {tmp_split} {i} 1", shell=True
-            ).check_returncode()
-            subprocess.run(
-                f"greedy -d 3 -rf {fixed} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads}",
-                shell=True,
-            ).check_returncode()
-        components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
-        subprocess.run(
-            f"fslmerge -t {outpath} {' '.join(components)}", shell=True
-        ).check_returncode()
-    return outpath
-
-
 @click.command()
 @click.option("--fixed", type=Path, required=True)
 @click.option("--dtidir", type=Path, required=True)
@@ -127,7 +96,7 @@ def reslice_dti(
             save_mri(resliced_mri, outpath, dtype=np.single)
 
     resliced_tensor = construct_tensor_from_eigs(outdir, out_pattern)
-    save_mri(resliced_tensor, outdir / f"{out_pattern}_tensor.nii.gz", dtype=np.single)h
+    save_mri(resliced_tensor, outdir / f"{out_pattern}_tensor.nii.gz", dtype=np.single)
 
 
 @click.command("eddy-index")
@@ -142,8 +111,6 @@ def create_eddy_index_file(input: Path, output: Path):
     index = ["1"] * nframes
     with open(output, "w") as f:
         f.write(" ".join(index))
-    
-    
 
 
 if __name__ == "__main__":

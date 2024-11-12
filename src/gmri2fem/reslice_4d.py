@@ -19,30 +19,35 @@ def moving_pair(args):
 @click.option("--outpath", type=Path, required=True)
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
-def reslice4d(
+def reslice4d(**kwargs):
+    reslice_4d(**kwargs)
+
+
+def reslice_4d(
     inpath: Path,
     fixed: Path,
     outpath: Path,
     transform: Optional[Path] = None,
     threads: int = 1,
+    tmppath: Optional[Path] = None,
 ) -> Path:
     if transform is None:
         transform = Path("")
+    if tmppath is None:
+        tmppath = Path(tempfile.TemporaryDirectory(prefix=Path(outpath).stem))
     nframes = mri_number_of_frames(inpath)
-    with tempfile.TemporaryDirectory(prefix=outpath.stem) as tmpdir:
-        tmppath = Path(tmpdir)
-        for i in range(nframes):
-            tmp_split = tmppath / f"slice{i}.nii.gz"
-            tmp_reslice = tmppath / f"reslice{i}.nii.gz"
-            subprocess.run(
-                f"fslroi {inpath} {tmp_split} {i} 1", shell=True
-            ).check_returncode()
-            subprocess.run(
-                f"greedy -d 3 -rf {fixed} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads}",
-                shell=True,
-            ).check_returncode()
-        components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
+    for i in range(nframes):
+        tmp_split = tmppath / f"slice{i}.nii.gz"
+        tmp_reslice = tmppath / f"reslice{i}.nii.gz"
         subprocess.run(
-            f"fslmerge -t {outpath} {' '.join(components)}", shell=True
+            f"fslroi {inpath} {tmp_split} {i} 1", shell=True
         ).check_returncode()
+        subprocess.run(
+            f"greedy -d 3 -rf {fixed} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads}",
+            shell=True,
+        ).check_returncode()
+    components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
+    subprocess.run(
+        f"fslmerge -t {outpath} {' '.join(components)}", shell=True
+    ).check_returncode()
     return outpath

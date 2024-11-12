@@ -8,7 +8,7 @@ import click
 def mri_number_of_frames(input: Path) -> int:
     return int(
         subprocess.check_output(
-            f"mri_info --nframes {input} | grep -v INFO", shell=True
+            f"mri_info --nframes {input} | grep -v -E 'INFO|unknown time'", shell=True
         )
     )
 
