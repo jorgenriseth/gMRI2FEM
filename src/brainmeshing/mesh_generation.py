@@ -32,7 +32,7 @@ def meshgen(surfacedir: Path, output: Path, resolution: float, keep_ventricles: 
     except Exception as e:
         print(surface_files)
         raise e
-    tags = {"gray": 1, "white": 2, "subcort-gray": 1, "ventricles": 3}
+    tags = {"gray": 1, "white": 2, "subcort-gray": 3, "ventricles": 4}
     surfaces = [
         svmtk_surfaces[surf]
         for surf in [
