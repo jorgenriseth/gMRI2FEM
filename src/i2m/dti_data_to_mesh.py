@@ -88,7 +88,7 @@ def dti_data_to_mesh(
     DG0 = df.FunctionSpace(domain, "DG", 0)
     DG09 = df.TensorFunctionSpace(domain, "DG", 0)
 
-    dof_voxels = locate_dof_voxels(DG0, md_mri)
+    dof_voxels = locate_dof_voxels(DG0, md_mri, rint=False)
     dof_neighbours = find_dof_nearest_neighbours(dof_voxels, dti_mask, N=1)
 
     D = df.Function(DG09)

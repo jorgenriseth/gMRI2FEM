@@ -105,7 +105,7 @@ def map_concentration(
     V = df.FunctionSpace(domain, femfamily, femdegree)
 
     concentration_mri = load_mri(concentration_paths[0], dtype=np.single)
-    dof_voxels = locate_dof_voxels(V, concentration_mri)
+    dof_voxels = locate_dof_voxels(V, concentration_mri, rint=False)
 
     boundary_dofs = find_boundary_dofs(V)
     boundary_dof_neighbours = find_dof_nearest_neighbours(

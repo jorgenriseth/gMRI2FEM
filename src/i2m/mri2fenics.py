@@ -33,11 +33,14 @@ def find_boundary_dofs(V: df.FunctionSpace) -> np.ndarray:
     )
 
 
-def locate_dof_voxels(V: df.FunctionSpace, mri: sm.SimpleMRI):
+def locate_dof_voxels(V: df.FunctionSpace, mri: sm.SimpleMRI, rint: bool = True):
     """Create a list of indices of voxels of an mri for which the dof coordinates
     of a fenics function space are located within."""
     dof_coordinates = V.tabulate_dof_coordinates()
-    return np.rint(sm.apply_affine(np.linalg.inv(mri.affine), dof_coordinates)).astype(int)  # fmt: skip
+    img_space_coords = sm.apply_affine(np.linalg.inv(mri.affine), dof_coordinates)
+    if rint:
+        return np.rint(img_space_coords).astype(int)
+    return img_space_coords
 
 
 def mri2fem_interpolate(
