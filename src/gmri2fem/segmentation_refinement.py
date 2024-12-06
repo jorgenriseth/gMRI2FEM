@@ -44,7 +44,7 @@ def resample_segmentation(seg_mri: sm.SimpleMRI, reference_mri: sm.SimpleMRI):
     upsampled_inds = upsampled_inds[valid_index_mask]
     seg_inds = seg_inds[valid_index_mask]
 
-    seg_upsampled = np.zeros(shape_out, dtype=SEG_DTYPE)
+    seg_upsampled = np.zeros(shape_out, dtype=seg_mri.data.dtype)
     I_in, J_in, K_in = seg_inds.T
     I_out, J_out, K_out = upsampled_inds.T
     seg_upsampled[I_out, J_out, K_out] = seg_mri[I_in, J_in, K_in]

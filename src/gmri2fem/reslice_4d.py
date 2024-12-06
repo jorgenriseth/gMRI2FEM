@@ -1,7 +1,9 @@
 import subprocess
 import tempfile
 from pathlib import Path
+import re
 from typing import Optional
+import tqdm
 
 from dti.utils import mri_number_of_frames
 import click
@@ -19,6 +21,8 @@ def moving_pair(args):
 @click.option("--outpath", type=Path, required=True)
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
+@click.option("--tmppath", type=Path)
+@click.option("--greedyargs", type=str)
 def reslice4d(**kwargs):
     reslice_4d(**kwargs)
 
@@ -30,12 +34,18 @@ def reslice_4d(
     transform: Optional[Path] = None,
     threads: int = 1,
     tmppath: Optional[Path] = None,
+    greedyargs: Optional[str] = None,
 ) -> Path:
     if transform is None:
         transform = Path("")
     if tmppath is None:
-        tmppath = Path(tempfile.TemporaryDirectory(prefix=Path(outpath).stem))
+        tmpfile = tempfile.TemporaryDirectory(prefix=Path(outpath).stem)
+        tmppath = Path(tmpfile.name)
+    if greedyargs is None:
+        greedyargs = ""
+
     nframes = mri_number_of_frames(inpath)
+
     for i in range(nframes):
         tmp_split = tmppath / f"slice{i}.nii.gz"
         tmp_reslice = tmppath / f"reslice{i}.nii.gz"
@@ -43,7 +53,7 @@ def reslice_4d(
             f"fslroi {inpath} {tmp_split} {i} 1", shell=True
         ).check_returncode()
         subprocess.run(
-            f"greedy -d 3 -rf {fixed} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads}",
+            f"greedy -d 3 -rf {fixed} {greedyargs} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads} ",
             shell=True,
         ).check_returncode()
     components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]

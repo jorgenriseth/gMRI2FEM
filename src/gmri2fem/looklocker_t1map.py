@@ -132,16 +132,12 @@ def postprocess_T1map(
 @click.option("--input", type=Path, required=True)
 @click.option("--timestamps", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
-@click.option("--T1_low", type=float, default=1)
-@click.option("--T1_high", type=float, default=float("Inf"))
-@click.option("--postprocessed", type=Path)
-@click.option("--R1", type=Path)
-@click.option("--R1_postprocessed", type=Path)
-def looklocker_t1map(
-    input,
-    timestamps,
-    output,
-):
+# @click.option("--T1_low", type=float, default=1)
+# @click.option("--T1_high", type=float, default=float("Inf"))
+# @click.option("--postprocessed", type=Path)
+# @click.option("--R1", type=Path)
+# @click.option("--R1_postprocessed", type=Path)
+def looklocker_t1map(input, timestamps, output):
     time = np.loadtxt(timestamps) / 1000
     LL_mri = load_mri(input, dtype=np.single)
     T1map_mri = estimate_t1map(time, LL_mri.data, LL_mri.affine)
