@@ -8,23 +8,25 @@ import skimage
 import tqdm
 
 from gmri2fem.utils import apply_affine
+import simple_mri as sm
 from simple_mri import load_mri, SimpleMRI, save_mri, assert_same_space
+from enum import Enum
+
+
+class DTYPE(Enum):
+    BINARY = np.uint8
+    SEG = np.int16
+    FLOAT = np.single
+
 
 MASK_DTYPE = np.uint8
 SEG_DTYPE = np.int16
 DATA_DTYPE = np.single
 
 
-def seg_upsampling(
-    reference: Path,
-    segmentation: Path,
-) -> SimpleMRI:
-    seg_mri = load_mri(segmentation, SEG_DTYPE)
-    reference_mri = load_mri(reference, DATA_DTYPE)
-
+def resample_segmentation(seg_mri: sm.SimpleMRI, reference_mri: sm.SimpleMRI):
     shape_in = seg_mri.shape
     shape_out = reference_mri.shape
-
     upsampled_inds = np.fromiter(
         itertools.product(*(np.arange(ni) for ni in shape_out)),
         dtype=np.dtype((int, 3)),
@@ -42,17 +44,14 @@ def seg_upsampling(
     upsampled_inds = upsampled_inds[valid_index_mask]
     seg_inds = seg_inds[valid_index_mask]
 
+    seg_upsampled = np.zeros(shape_out, dtype=seg_mri.data.dtype)
     I_in, J_in, K_in = seg_inds.T
     I_out, J_out, K_out = upsampled_inds.T
-
-    seg_upsampled = np.zeros(shape_out, dtype=SEG_DTYPE)
     seg_upsampled[I_out, J_out, K_out] = seg_mri[I_in, J_in, K_in]
-    upsampled_seg_mri = SimpleMRI(seg_upsampled, reference_mri.affine)
-    assert_same_space(upsampled_seg_mri, reference_mri)
-    return upsampled_seg_mri
+    return sm.SimpleMRI(seg_upsampled, reference_mri.affine)
 
 
-def csf_segmentation(
+def segment_csf(
     seg_upsampled_mri: SimpleMRI,
     csf_mask_mri: SimpleMRI,
 ) -> SimpleMRI:
@@ -61,7 +60,7 @@ def csf_segmentation(
     inds = np.array([I, J, K]).T
     interp = scipy.interpolate.NearestNDInterpolator(inds, seg_upsampled_mri[I, J, K])
     i, j, k = np.where(csf_mask_mri.data)
-    csf_seg = np.zeros_like(seg_upsampled_mri.data)
+    csf_seg = np.zeros_like(seg_upsampled_mri.data, dtype=SEG_DTYPE)
     csf_seg[i, j, k] = interp(i, j, k)
     return SimpleMRI(csf_seg, csf_mask_mri.affine)
 
@@ -123,17 +122,17 @@ def refine(
     output_csfseg: Path,
     label_smoothing: float = 0,
 ):
-    upsampled_seg = seg_upsampling(reference, fs_seg)
+    seg_mri = load_mri(fs_seg, SEG_DTYPE)
+    reference_mri = load_mri(reference, DATA_DTYPE)
+    upsampled_seg = resample_segmentation(seg_mri, reference_mri)
     if label_smoothing > 0:
         upsampled_seg.data = segmentation_smoothing(
             upsampled_seg.data, sigma=label_smoothing
         )["labels"]
+    save_mri(upsampled_seg, output_seg, dtype=SEG_DTYPE)
     csf_mask = load_mri(csfmask, dtype=bool)
-    csf_seg = csf_segmentation(upsampled_seg, csf_mask)
+    csf_seg = segment_csf(upsampled_seg, csf_mask)
     save_mri(csf_seg, output_csfseg, dtype=SEG_DTYPE)
-
-    refined_seg = segmentation_refinement(upsampled_seg, csf_seg)
-    save_mri(refined_seg, output_seg, dtype=SEG_DTYPE)
 
 
 if __name__ == "__main__":

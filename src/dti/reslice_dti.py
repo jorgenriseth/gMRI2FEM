@@ -5,25 +5,32 @@ from typing import Optional
 
 import click
 import numpy as np
-import matplotlib.pyplot as plt
 
 from simple_mri import load_mri, SimpleMRI, save_mri
 
+from gmri2fem.reslice_4d import reslice_4d
 
-def construct_tensor_from_eigs(dti_folder: Path, prefix_pattern: str) -> SimpleMRI:
-    eigvec = load_mri(dti_folder / f"{prefix_pattern}_V1.nii.gz", np.single)
+
+def construct_tensor_from_eigs(
+    dti_folder: Path, prefix_pattern: str, suffix: str
+) -> SimpleMRI:
+    eigvec = load_mri(dti_folder / f"{prefix_pattern}_V1{suffix}.nii.gz", np.single)
     spatial_shape = eigvec.data.shape[:3]
     B = np.zeros((*spatial_shape, 3, 3), dtype=eigvec.data.dtype)
     L = np.zeros_like(B)
     for i in range(1, 4):
-        eigvec = load_mri(dti_folder / f"{prefix_pattern}_V{i}.nii.gz", np.single)
-        eigval = load_mri(dti_folder / f"{prefix_pattern}_L{i}.nii.gz", np.single)
+        eigvec = load_mri(
+            dti_folder / f"{prefix_pattern}_V{i}{suffix}.nii.gz", np.single
+        )
+        eigval = load_mri(
+            dti_folder / f"{prefix_pattern}_L{i}{suffix}.nii.gz", np.single
+        )
         B[..., :, i - 1] = eigvec.data
         L[..., i - 1, i - 1] = eigval.data
     valid_mask = np.linalg.det(L) != 0
     Binv = np.zeros_like(B)
     Binv[valid_mask] = np.linalg.inv(B[valid_mask])
-    return SimpleMRI(B @ L @ Binv, eigvec.affine)
+    return SimpleMRI((B @ L @ Binv).reshape(*spatial_shape, 9), eigvec.affine)
 
 
 def construct_tensor_from_vector_array(tensor: SimpleMRI) -> SimpleMRI:
@@ -56,39 +63,6 @@ def construct_and_save_tensor(
     save_mri(tensor_out, output, dtype=tensor_out.data.dtype)
 
 
-def reslice_4d(
-    inpath: Path,
-    fixed: Path,
-    outpath: Path,
-    transform: Optional[Path] = None,
-    threads: int = 1,
-) -> Path:
-    if transform is None:
-        transform = Path("")
-    nframes = int(
-        subprocess.check_output(
-            f"mri_info --nframes {inpath} | grep -v INFO", shell=True
-        )
-    )
-    with tempfile.TemporaryDirectory(prefix=outpath.stem) as tmpdir:
-        tmppath = Path(tmpdir)
-        for i in range(nframes):
-            tmp_split = tmppath / f"slice{i}.nii.gz"
-            tmp_reslice = tmppath / f"reslice{i}.nii.gz"
-            subprocess.run(
-                f"fslroi {inpath} {tmp_split} {i} 1", shell=True
-            ).check_returncode()
-            subprocess.run(
-                f"greedy -d 3 -rf {fixed} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads}",
-                shell=True,
-            ).check_returncode()
-        components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
-        subprocess.run(
-            f"fslmerge -t {outpath} {' '.join(components)}", shell=True
-        ).check_returncode()
-    return outpath
-
-
 @click.command()
 @click.option("--fixed", type=Path, required=True)
 @click.option("--dtidir", type=Path, required=True)
@@ -96,6 +70,8 @@ def reslice_4d(
 @click.option("--outdir", type=Path)
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
+@click.option("--suffix", type=str, default="")
+@click.option("--greedyargs", type=str, default="")
 def reslice_dti(
     fixed: Path,
     dtidir: Path,
@@ -104,30 +80,40 @@ def reslice_dti(
     transform: Path,
     threads: int,
     out_pattern: Optional[str] = None,
+    suffix: str = None,
+    greedyargs: str = None,
 ):
     if out_pattern is None:
         out_pattern = prefix_pattern
 
+    if greedyargs is None:
+        greedyargs = ""
+
     for c in ["FA", "MD", *[f"L{i}" for i in range(1, 4)]]:
         inpath = dtidir / f"{prefix_pattern}_{c}.nii.gz"
-        outpath = outdir / f"{out_pattern}_{c}.nii.gz"
-        print(inpath, outpath)
-        reslice_4d(inpath, fixed, outpath, transform, threads)
+        outpath = outdir / f"{out_pattern}_{c}{suffix}.nii.gz"
+        reslice_4d(inpath, fixed, outpath, transform, threads, greedyargs=greedyargs)
 
     with tempfile.TemporaryDirectory(prefix=out_pattern) as tmpdir:
         tmppath = Path(tmpdir)
         for Vi in [f"V{i}" for i in range(1, 4)]:
             inpath = dtidir / f"{prefix_pattern}_{Vi}.nii.gz"
-            resliced = tmppath / f"{out_pattern}_{Vi}.nii.gz"
+            resliced = tmppath / f"{out_pattern}_{Vi}{suffix}.nii.gz"
             outpath = outdir / resliced.name
-            reslice_4d(inpath, fixed, resliced, transform, threads)
+            reslice_4d(
+                inpath, fixed, resliced, transform, threads, greedyargs=greedyargs
+            )
             resliced_mri = load_mri(resliced, dtype=np.single)
             norms = np.linalg.norm(resliced_mri.data, axis=-1, ord=2)
             resliced_mri.data[norms > 0] /= norms[norms > 0, np.newaxis]
             save_mri(resliced_mri, outpath, dtype=np.single)
 
-    resliced_tensor = construct_tensor_from_eigs(outdir, out_pattern)
-    save_mri(resliced_tensor, outdir / f"{out_pattern}_tensor.nii.gz", dtype=np.single)h
+    resliced_tensor = construct_tensor_from_eigs(outdir, out_pattern, suffix)
+    save_mri(
+        resliced_tensor,
+        outdir / f"{out_pattern}_tensor{suffix}.nii.gz",
+        dtype=np.single,
+    )
 
 
 @click.command("eddy-index")
@@ -136,14 +122,12 @@ def reslice_dti(
 def create_eddy_index_file(input: Path, output: Path):
     nframes = int(
         subprocess.check_output(
-            f"mri_info --nframes {inpath} | grep -v INFO", shell=True
+            f"mri_info --nframes {input} | grep -v INFO", shell=True
         )
     )
     index = ["1"] * nframes
     with open(output, "w") as f:
         f.write(" ".join(index))
-    
-    
 
 
 if __name__ == "__main__":

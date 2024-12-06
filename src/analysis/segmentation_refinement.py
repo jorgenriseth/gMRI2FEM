@@ -51,7 +51,7 @@ def seg_upsampling(
     return nifti1.Nifti1Image(seg_upsampled, reference_affine)
 
 
-def csf_segmentation(
+def segment_csf(
     seg_upsampled_mri: nifti1.Nifti1Image,
     csf_mask_mri: nifti1.Nifti1Image,
 ) -> nifti1.Nifti1Image:
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     csf_mask = nifti1.load(args.csfmask)
     upsampled_seg = seg_upsampling(args.reference, args.fs_seg)
-    csf_seg = csf_segmentation(upsampled_seg, csf_mask)
+    csf_seg = segment_csf(upsampled_seg, csf_mask)
     nifti1.save(csf_seg, args.output_csfseg)
 
     refined_seg = segmentation_refinement(upsampled_seg, csf_seg)

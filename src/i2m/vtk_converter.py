@@ -84,9 +84,9 @@ def convert_to_vtk(hdf_data: Path, output: Path):
 @click.command()
 @click.option("--input", "hdf_data", type=Path, required=True)
 @click.option("--output", "output", type=Path, required=True)
-def main(**kwargs):
+def hdf2vtk(**kwargs):
     convert_to_vtk(**kwargs)
 
 
 if __name__ == "__main__":
-    main()
+    hdf2vtk()

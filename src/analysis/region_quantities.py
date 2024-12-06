@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from gmri2fem.analysis.seg_groups import default_segmentation_groups
+from gmri2fem.segmentation_groups import default_segmentation_groups
 
 
 def find_timestamp(

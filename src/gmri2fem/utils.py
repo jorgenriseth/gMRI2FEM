@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 import skimage
 import tqdm
+import re
 
 
 def apply_affine(T: np.ndarray, X: np.ndarray) -> np.ndarray:
@@ -54,23 +55,6 @@ def largest_island(mask: np.ndarray, connectivity: int = 1) -> np.ndarray:
     regions = skimage.measure.regionprops(newmask)
     regions.sort(key=lambda x: x.num_pixels, reverse=True)
     return newmask == regions[0].label
-
-
-def create_csf_mask(
-    vol: np.ndarray, connectivity: int = 2, use_li: bool = False
-) -> np.ndarray:
-    if use_li:
-        thresh = skimage.filters.threshold_li(vol)
-        binary = vol > thresh
-        binary = largest_island(binary, connectivity=connectivity)
-    else:
-        (hist, bins) = np.histogram(
-            vol[(vol > 0) * (vol < np.quantile(vol, 0.999))], bins=512
-        )
-        thresh = skimage.filters.threshold_yen(hist=(hist, bins))
-        binary = vol > thresh
-        binary = largest_island(binary, connectivity=connectivity)
-    return binary
 
 
 def grow_restricted(grow, restriction, growth_radius):
@@ -165,3 +149,18 @@ def connectivity_matrix(arr):
 
     K += np.triu(K, k=1).T
     return {"labels": labels, "connectivity": K}
+
+
+def float_string_formatter(x: float, digits):
+    if float(x) == float("inf"):
+        return "inf"
+    return f"{x*10**(-digits):{f'.{digits}e'}}".replace(".", "")
+
+
+def to_scientific(num, decimals):
+    if float(num) == float("inf"):
+        return "\infty"
+    x = f"{float(num):{f'.{decimals}e'}}"
+    m = re.search(r"(\d\.{0,1}\d*)e([\+|\-]\d{2})", x)
+
+    return f"{m.group(1)}\\times10^{{{int(m.group(2))}}}"
