@@ -8,6 +8,7 @@ SEGMENTATION_GROUPS = {
     "csf": [4, 5, 14, 15, 24, 43, 44],
     "cerebellum": [7, 8, 46, 47],
     "corpus-callosum": [251, 252, 253, 254, 255],
+    "thalamus": [10, 49],
     "caudate": [11, 50],
     "putamen": [12, 51],
     "pallidum": [13, 52],
@@ -35,6 +36,7 @@ COLLECTIONS = {
         "accumbens",
     ],
     "basal-ganglias": [
+        "thalamus",
         "caudate",
         "putamen",
         "pallidum",

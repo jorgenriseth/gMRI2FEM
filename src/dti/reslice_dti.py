@@ -59,7 +59,7 @@ def construct_and_save_tensor(
         )
         tensor_out = construct_tensor_from_vector_array(tensor_in)
     else:
-        tensor_out = construct_tensor_from_eigs(input_folder, prefix_pattern)
+        tensor_out = construct_tensor_from_eigs(input_folder, prefix_pattern, "")
     save_mri(tensor_out, output, dtype=tensor_out.data.dtype)
 
 
