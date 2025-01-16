@@ -35,12 +35,12 @@ def temp_seed(seed):
         np.random.set_state(state)
 
 
-def create_lut(
+def canonical_lut(
     segments: list[str], cmap: str, permute_colors: Optional[int] = None
 ) -> pd.DataFrame:
     n_segments = len(segments)
     colormap = mpl.colormaps[cmap]
-    color_list = colormap([i / n_segments for i in range(n_segments)])
+    color_list = colormap([(i + 1) / (n_segments + 1) for i in range(n_segments)])
 
     if permute_colors is not None:
         with temp_seed(permute_colors):
@@ -52,14 +52,16 @@ def create_lut(
             **{"RGBA"[i]: val for i, val in enumerate(color_list[idx])},
         }
         for idx, desc in enumerate(segments)
-    ]
+    ] + [{"label": 0, "description": "unknown", "R": 0, "G": 0, "B": 0, "A": 0}]
     return pd.DataFrame.from_records(sorted(records, key=lambda x: x["label"]))
 
 
 def listed_colormap(lut_table: pd.DataFrame) -> mpl.colors.ListedColormap:
     colors = lut_table[["R", "G", "B", "A"]].values
     labels = lut_table["label"].values
-    norm = mpl.colors.BoundaryNorm(boundaries=labels - 1 / 2, ncolors=len(labels))
+    norm = mpl.colors.BoundaryNorm(
+        boundaries=list(labels) + [labels[-1] + 1], ncolors=len(labels), clip=False
+    )
     return {"cmap": mpl.colors.ListedColormap(colors), "norm": norm}
 
 
@@ -105,27 +107,6 @@ def read_relabeling(filename: Path | str) -> dict[str, list[int]]:
     with open(filename, "r") as openfile:
         json_object = json.load(openfile)
     return json_object
-
-
-def canonical_lut(
-    segments: list[str], cmap: str, permute_colors: Optional[int] = None
-) -> pd.DataFrame:
-    n_segments = len(segments)
-    colormap = mpl.colormaps[cmap]
-    color_list = colormap([i / n_segments for i in range(n_segments)])
-
-    if permute_colors is not None:
-        with temp_seed(permute_colors):
-            np.random.shuffle(color_list)
-    records = [
-        {
-            "label": idx + 1,
-            "description": desc,
-            **{"RGBA"[i]: val for i, val in enumerate(color_list[idx])},
-        }
-        for idx, desc in enumerate(segments)
-    ]
-    return pd.DataFrame.from_records(sorted(records, key=lambda x: x["label"]))
 
 
 def collapse_segmentation(

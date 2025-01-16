@@ -2,7 +2,6 @@ from pathlib import Path
 
 import click
 import nibabel.nifti1 as nifti1
-import numpy as np
 import skimage
 
 
@@ -27,7 +26,7 @@ def T1_hybridization(
 
     hybrid = ll
     newmask = csf_mask * (ll > threshold) * (mixed > threshold)
-    hybrid[newmask] = np.maximum(mixed[newmask], ll[newmask])
+    hybrid[newmask] = mixed[newmask]
     return nifti1.Nifti1Image(hybrid, affine=ll_mri.affine, header=ll_mri.header)
 
 
