@@ -368,3 +368,7 @@ def legacy_image_grid_builder(fig_width, im_width, im_height, grid_config, frame
         ],
     }
     return fig, axes
+
+
+def flatten(list_of_lists):
+    return sum(list_of_lists, start=[])

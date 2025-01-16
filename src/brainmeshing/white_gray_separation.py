@@ -10,7 +10,7 @@ import SVMTK as svmtk
 import tqdm
 from loguru import logger
 
-from brainmeshing.surfaces import fs_surf_to_stl, pyvista2svmtk, svmtk2pyvista
+from brainmeshing.utils import fs_surf_to_stl, pyvista2svmtk, svmtk2pyvista, repair_triangulation
 
 
 @click.command("separate-surfaces")
@@ -20,7 +20,7 @@ from brainmeshing.surfaces import fs_surf_to_stl, pyvista2svmtk, svmtk2pyvista
 def main(fs_dir: Path, outputdir: Path, tmpdir: Optional[Path]):
     tempdir = tempfile.TemporaryDirectory()
     tmppath = Path(tempdir.name) if tmpdir is None else tmpdir
-    fs_surf_to_stl(fs_dir / "surf", tmppath)
+    fs_surf_to_stl(fs_dir / "surf", outputdir)
     separate_white_and_gray_surfaces(
         tmppath / "lh_pial.stl",
         tmppath / "lh_white.stl",
@@ -119,20 +119,6 @@ def separate_white_and_gray_surfaces(pial_in, white_in, pial_out, white_out):
     pv.save_meshio(white_out, new_white)
     logger.info(f"Finished separating with {pial_in}, {white_in}")
     print()
-
-
-def repair_triangulation(mesh):
-    v, f = mesh.points, mesh.faces
-    f = mesh.faces.reshape((-1, 4))[:, 1:]
-
-    meshfix = pymeshfix.MeshFix(v, f)
-    meshfix.repair()
-
-    num_points_stack = 3 * np.ones(
-        (meshfix.faces.shape[0], 1), dtype=meshfix.faces.dtype
-    )
-    pv_faces = np.concatenate((num_points_stack, meshfix.faces), axis=1).ravel()
-    return pv.PolyData(meshfix.v, pv_faces)
 
 
 if __name__ == "__main__":

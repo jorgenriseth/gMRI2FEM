@@ -112,10 +112,9 @@ def plot_orient(
         return volume[:, idx, ::-1].T
     elif plane == "axial":
         return volume[:, ::-1, idx].T
-    else:
-        raise ValueError(
-            f"Invlid plane '{plane}', should be one of 'sagittal', 'coronal', 'axial'"
-        )
+    raise ValueError(
+        f"Invalid plane '{plane}', should be one of 'sagittal', 'coronal', 'axial'"
+    )
 
 
 def session_range(*args):
@@ -159,7 +158,7 @@ def float_string_formatter(x: float, digits):
 
 def to_scientific(num, decimals):
     if float(num) == float("inf"):
-        return "\infty"
+        return r"\infty"
     x = f"{float(num):{f'.{decimals}e'}}"
     m = re.search(r"(\d\.{0,1}\d*)e([\+|\-]\d{2})", x)
 
