@@ -1,10 +1,10 @@
 import nibabel
 import pydicom
 import numpy as np
+import simple_mri as sm
+
 from pathlib import Path
 from loguru import logger
-
-from simple_mri import data_reorientation, change_of_coordinates_map, SimpleMRI
 
 VOLUME_LABELS = [
     "IR-modulus",
@@ -107,7 +107,7 @@ def extract_all_volumes(dcmpath: Path):
 def extract_single_volume(
     D: np.ndarray,
     frame_fg: pydicom.Dataset,
-) -> SimpleMRI:
+) -> sm.SimpleMRI:
     # Find scaling values (should potentially be inside scaling loop)
     pixel_value_transform = frame_fg.PixelValueTransformationSequence[0]
     slope = float(pixel_value_transform.RescaleSlope)
@@ -116,14 +116,13 @@ def extract_single_volume(
     scale_slope = private[0x2005, 0x100E].value
 
     # Loop over and scale values.
-    # TODO: Change/Choose correct dtype for this volume
     volume = np.zeros_like(D, dtype=np.single)
     for idx in range(D.shape[0]):
         volume[idx] = (intercept + slope * D[idx]) / (scale_slope * slope)
 
     A_dcm = dicom_standard_affine(frame_fg)
-    C = change_of_coordinates_map("LPS", "RAS")
-    mri = data_reorientation(SimpleMRI(volume, C @ A_dcm))
+    C = sm.change_of_coordinates_map("LPS", "RAS")
+    mri = sm.data_reorientation(sm.SimpleMRI(volume, C @ A_dcm))
 
     return mri
 
