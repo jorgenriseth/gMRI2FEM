@@ -40,7 +40,7 @@ def cell_matrix_to_vtk_cells(cells: np.ndarray):
     return np.concatenate((num_points_stack, cells), axis=1).ravel()
 
 
-def convert_to_vtk(hdf_data: Path, output: Path):
+def convert_to_vtk(hdf_data: Path, output: Path, ascii: bool = False):
     hdf = df.HDF5File(df.MPI.comm_world, str(hdf_data), "r")
     domain = pr.read_domain(hdf)
     concentration_times = pr.read_timevector(hdf, "concentration")
@@ -78,12 +78,13 @@ def convert_to_vtk(hdf_data: Path, output: Path):
         output_vec = func.vector()[:]
         output_dim = output_vec.shape[0] // domain.cells().shape[0]
         grid.cell_data[name] = output_vec.reshape(-1, output_dim).squeeze()
-    pv.save_meshio(output, grid)
+    grid.save(output, binary=(not ascii))
 
 
 @click.command()
 @click.option("--input", "hdf_data", type=Path, required=True)
 @click.option("--output", "output", type=Path, required=True)
+@click.option("--ascii", "ascii", type=bool, is_flag=True)
 def hdf2vtk(**kwargs):
     convert_to_vtk(**kwargs)
 
