@@ -1,10 +1,11 @@
 import click
+
 from i2m.collect_mesh_data import collect
 from i2m.concentrations_to_mesh import concentrations2mesh
 from i2m.dti_data_to_mesh import dti2mesh
 from i2m.mesh_segments import subdomains
-from i2m.vtk_converter import hdf2vtk
 from i2m.vtk2mri import vtk2mri
+from i2m.vtk_converter import hdf2vtk
 
 
 @click.group()

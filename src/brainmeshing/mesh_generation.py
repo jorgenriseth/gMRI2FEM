@@ -21,7 +21,7 @@ from brainmeshing.utils import (
     pyvista2svmtk,
     svmtk2pyvista,
     taubin_svmtk,
-    grow_white_connective_tissue
+    grow_white_connective_tissue,
 )
 from brainmeshing.ventricles import extract_ventricle_surface
 from gmri2fem.segmentation_groups import default_segmentation_groups
@@ -37,6 +37,7 @@ from gmri2fem.utils import segmentation_smoothing
 def meshgen(**kwargs):
     create_cerebral_mesh(**kwargs)
 
+
 def create_cerebral_mesh(
     fs_dir: Path,
     surface_dir: Path,
@@ -44,7 +45,9 @@ def create_cerebral_mesh(
     resolution: int,
     keep_ventricles: bool = False,
 ):
-    logger.info(f"Creating cerebral mesh from {fs_dir} -> {output} with resolution 32")
+    logger.info(
+        f"Creating cerebral mesh from {fs_dir} -> {output} with resolution {resolution}"
+    )
     Path(surface_dir).mkdir(exist_ok=True)
     print(fs_dir)
     seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
@@ -64,7 +67,9 @@ def create_cerebral_mesh(
     fs_surf_to_stl(f"{fs_dir}/surf", Path(surface_dir), suffix="", verbose=True)
     preprocess_white_matter_surfaces(fs_dir, surface_dir)
     preprocess_pial_surfaces(surface_dir)
-    generate_mesh(Path(surface_dir), Path(output), resolution, keep_ventricles=keep_ventricles)
+    generate_mesh(
+        Path(surface_dir), Path(output), resolution, keep_ventricles=keep_ventricles
+    )
 
 
 def generate_mesh(
@@ -109,6 +114,7 @@ def generate_mesh(
     mesh2xdmf(str(output.with_suffix(".mesh")), xdmfdir, dim=3)
     _ = xdmf2hdf(xdmfdir, output)
 
+
 def preprocess_pial_surfaces(
     surface_dir,
     max_edge_length=1.0,
@@ -149,7 +155,6 @@ def preprocess_pial_surfaces(
 
     lh_pial_svm.save(f"{surface_dir}/lh_pial_refined.stl")
     rh_pial_svm.save(f"{surface_dir}/rh_pial_refined.stl")
-
 
 
 def preprocess_white_matter_surfaces(
@@ -205,3 +210,4 @@ def extract_subcortical_gm(
 
 if __name__ == "__main__":
     meshgen()
+

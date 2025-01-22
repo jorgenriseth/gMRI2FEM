@@ -3,13 +3,14 @@ from pathlib import Path
 import click
 import dolfin as df
 import numpy as np
-import tqdm
-from i2m.concentrations_to_mesh import nearest_neighbour
 import simple_mri as sm
-from simple_mri import load_mri
-from gmri2fem.utils import apply_affine
-from i2m.mri2fenics import locate_dof_voxels, find_dof_nearest_neighbours
+import tqdm
 from pantarei import read_domain
+from simple_mri import load_mri
+
+from gmri2fem.utils import apply_affine
+from i2m.concentrations_to_mesh import nearest_neighbour
+from i2m.mri2fenics import find_dof_nearest_neighbours, locate_dof_voxels
 
 
 @click.command("subdomains")
