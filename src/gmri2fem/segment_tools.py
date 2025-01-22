@@ -40,7 +40,9 @@ def canonical_lut(
 ) -> pd.DataFrame:
     n_segments = len(segments)
     colormap = mpl.colormaps[cmap]
-    color_list = colormap([(i + 1) / (n_segments + 1) for i in range(n_segments)])
+
+    # Zero is added manually below
+    color_list = colormap([(i + 1) / n_segments for i in range(n_segments)])
 
     if permute_colors is not None:
         with temp_seed(permute_colors):
@@ -57,10 +59,12 @@ def canonical_lut(
 
 
 def listed_colormap(lut_table: pd.DataFrame) -> mpl.colors.ListedColormap:
-    colors = lut_table[["R", "G", "B", "A"]].values
-    labels = lut_table["label"].values
+    # Norm need sorted labels
+    sorted_table = lut_table.sort_values("label").reset_index(drop=True)
+    colors = sorted_table[["R", "G", "B", "A"]].values
+    labels = sorted_table["label"].values
     norm = mpl.colors.BoundaryNorm(
-        boundaries=list(labels) + [labels[-1] + 1], ncolors=len(labels), clip=False
+        boundaries=list(labels) + [labels[-1] + 1], ncolors=len(colors), clip=False
     )
     return {"cmap": mpl.colors.ListedColormap(colors), "norm": norm}
 
