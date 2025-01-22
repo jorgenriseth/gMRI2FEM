@@ -14,7 +14,6 @@ from gmri2fem.utils import apply_affine, nan_filter_gaussian
 def find_dof_nearest_neighbours(
     dof_inds: np.ndarray, mask: np.ndarray, N: int
 ) -> np.ndarray:
-    dof_neighbours = -np.ones((2, N, dof_inds.shape[0]), int)
     valid_inds = np.argwhere(mask)
     tree = scipy.spatial.KDTree(valid_inds)
     distances, indices = tree.query(dof_inds, k=N)
