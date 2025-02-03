@@ -227,6 +227,7 @@ def taubin_smooth(svm_surface, taubin_iter, taubin_pass_band):
     )
     return pyvista2svmtk(pv_surface)
 
+
 def pyvista2svmtk(
     pv_grid: pv.DataObject, suffix: Optional[str] = None
 ) -> svmtk.Surface:
@@ -271,7 +272,10 @@ def embed_overlapping(pial, white, step_size=1.0):
     warped.points[nonzero_distance_verts] = pial.points[nonzero_distance_verts]
     return repair_triangulation(warped)
 
-def remove_ventricles(mesh_path: Path, output_path: Path, ventricles_label: Optional[int] = None):
+
+def remove_ventricles(
+    mesh_path: Path, output_path: Path, ventricles_label: Optional[int] = None
+):
     mesh = pv.read_meshio(mesh_path)
     all_labels = np.unique(mesh.cell_data["label"])
     if ventricles_label is None:
@@ -279,7 +283,6 @@ def remove_ventricles(mesh_path: Path, output_path: Path, ventricles_label: Opti
     brain_labels = all_labels[all_labels != ventricles_label]
     brain = mesh.extract_values(brain_labels)
     pv.save_meshio(output_path, brain)
-
 
 
 def grow_white_connective_tissue(

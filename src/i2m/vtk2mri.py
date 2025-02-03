@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import click
-import pyvista as pv
 import nibabel as nibabel
 import numpy as np
+import pyvista as pv
 import simple_mri as sm
 
 

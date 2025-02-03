@@ -1,5 +1,6 @@
-import click
 from pathlib import Path
+
+import click
 import dolfin as df
 import pantarei as pr
 

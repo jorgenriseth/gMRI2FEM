@@ -23,23 +23,19 @@ SOFTWARE.
 '''
 """
 
-import click
 from pathlib import Path
 
-
-import numpy as np
-import nibabel
+import click
 import dolfin as df
+import nibabel
+import numpy as np
 import pantarei as pr
-from ufl import tr, sqrt, inner, dev
-from nibabel.affines import apply_affine
 import simple_mri as sm
+from nibabel.affines import apply_affine
+from ufl import dev, inner, sqrt, tr
 
 from dti.clean_dti_data import extend_to_9_component_array
-from i2m.mri2fenics import (
-    locate_dof_voxels,
-    find_dof_nearest_neighbours,
-)
+from i2m.mri2fenics import find_dof_nearest_neighbours, locate_dof_voxels
 
 
 def mean_diffusivity(Dvector: np.ndarray) -> np.ndarray:

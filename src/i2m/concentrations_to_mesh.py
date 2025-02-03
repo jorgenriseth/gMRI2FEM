@@ -2,23 +2,22 @@ import re
 from pathlib import Path
 from typing import Optional
 
-
 import click
 import dolfin as df
 import numpy as np
-import scipy
 import pandas as pd
-import tqdm
 import pantarei as pr
+import scipy
 import skimage
+import tqdm
 from pantarei import FenicsStorage, fenicsstorage2xdmf
+from simple_mri import SimpleMRI, load_mri
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
-from simple_mri import load_mri, SimpleMRI
 from i2m.mri2fenics import (
-    locate_dof_voxels,
     find_boundary_dofs,
     find_dof_nearest_neighbours,
+    locate_dof_voxels,
 )
 
 

@@ -1,14 +1,12 @@
 from pathlib import Path
-import click
 
+import click
+import dolfin as df
 import meshio
 import numpy as np
-import pyvista as pv
 import pandas as pd
-import dolfin as df
 import pantarei as pr
-
-from pathlib import Path
+import pyvista as pv
 
 
 def extract_sequence_timestamps(
