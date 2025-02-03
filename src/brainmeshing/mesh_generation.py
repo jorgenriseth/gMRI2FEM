@@ -28,26 +28,27 @@ from gmri2fem.segmentation_groups import default_segmentation_groups
 from gmri2fem.utils import segmentation_smoothing
 
 
-@click.command("meshgen")
+@click.command("process-surfaces")
 @click.option("--fs_dir", type=Path, required=True)
+@click.option("--surface_dir", type=Path, required=True)
+def process_surfaces(**kwargs):
+    process_cerebral_surfaces(**kwargs)
+
+
+@click.command("meshgen")
 @click.option("--surface_dir", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
 @click.option("--resolution", type=int, required=True)
 @click.option("--keep-ventricles", is_flag=True)
 def meshgen(**kwargs):
-    create_cerebral_mesh(**kwargs)
+    generate_mesh(**kwargs)
 
 
-def create_cerebral_mesh(
+def process_cerebral_surfaces(
     fs_dir: Path,
     surface_dir: Path,
-    output: Path,
-    resolution: int,
-    keep_ventricles: bool = False,
 ):
-    logger.info(
-        f"Creating cerebral mesh from {fs_dir} -> {output} with resolution {resolution}"
-    )
+    logger.info(f"Processing surfaces from {fs_dir} -> {surface_dir}")
     Path(surface_dir).mkdir(exist_ok=True)
     print(fs_dir)
     seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
@@ -67,15 +68,14 @@ def create_cerebral_mesh(
     fs_surf_to_stl(f"{fs_dir}/surf", Path(surface_dir), suffix="", verbose=True)
     preprocess_white_matter_surfaces(fs_dir, surface_dir)
     preprocess_pial_surfaces(surface_dir)
-    generate_mesh(
-        Path(surface_dir), Path(output), resolution, keep_ventricles=keep_ventricles
-    )
 
 
 def generate_mesh(
     surface_dir: Path, output: Path, resolution: float, keep_ventricles: bool
 ):
-    logger.info("Meshing...")
+    logger.info(
+        f"Creating cerebral mesh from {surface_dir} -> {output} with resolution {resolution}"
+    )
     surface_names = [
         "rh_pial_refined",
         "lh_pial_refined",
@@ -210,4 +210,3 @@ def extract_subcortical_gm(
 
 if __name__ == "__main__":
     meshgen()
-

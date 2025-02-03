@@ -151,6 +151,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/38/fc/bce832fd4fd99766c04d1ee0eead6b0ec6486fb100ae5e74c1d91292b982/certifi-2025.1.31-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5c/aa/f62ce24417ecb19f5ba1aa1dbe72394d11f11f5e53fc53497ccfaab83d3c/cftime-1.6.4.post1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/93/62/5e89cdfe04584cb7f4d36003ffa2936681b03ecc0754f8e969c2becb7e24/charset_normalizer-3.4.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a9/57/86c500d63b3e26e5b73a28b8291a67c5608d4aa87ebd17bd15bb33c178bc/contourpy-1.3.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/27/cd/c883e1a7c447479d6e13985565080e3fea88ab5a107c21684c813dba1875/flexcache-0.3-py3-none-any.whl
@@ -171,7 +172,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/b9/54/dd730b32ea14ea797530a4479b2ed46a6fb250f682a9cfb997e968bf0261/networkx-3.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/43/b2/dc384197be44e2a640bb43311850e23c2c30f3b82ce7c8cdabbf0e53045e/nibabel-5.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/88/ef/eb23f262cca3c0c4eb7ab1933c3b1f03d021f2c48f54763065b6f0e321be/packaging-24.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cc/55/f09223d75061e2bf6006e8484fcc0278d1b2691c6e6e0988730907b5d5c8/panta_rhei-0.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/25/33/c512e0b416f9f7d1368c333609fc0883c78a5fd205976cd99885a2707788/panta_rhei-0.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/84/7a/cd0c3eaf4a28cb2a74bdd19129f7726277a7f30c4f8424cd27a62987d864/pillow-11.1.0-cp310-cp310-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b7/16/bd2f5904557265882108dc2e04f18abc05ab0c2b7082ae9430091daf1d5c/Pint-0.24.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3c/a6/bc1012356d8ece4d66dd75c4b9fc6c1f6650ddd5991e421177d9f8f671be/platformdirs-4.3.6-py3-none-any.whl
@@ -329,6 +330,14 @@ packages:
   name: charset-normalizer
   version: 3.4.1
   sha256: b010a7a4fd316c3c484d482922d13044979e78d1861f0e0650423144c616a46a
+  requires_python: '>=3.7'
+- pypi: https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl
+  name: click
+  version: 8.1.8
+  sha256: 63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2
+  requires_dist:
+  - colorama ; platform_system == 'Windows'
+  - importlib-metadata ; python_full_version < '3.8'
   requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/a9/57/86c500d63b3e26e5b73a28b8291a67c5608d4aa87ebd17bd15bb33c178bc/contourpy-1.3.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
   name: contourpy
@@ -685,7 +694,7 @@ packages:
 - pypi: .
   name: gmri2fem
   version: 0.0.1
-  sha256: 6fb05e0b4b0200da54d495cdab19f79e0bf4c226a01d6c80fedfcefc839f95c6
+  sha256: 9adbbac2ca6b2c6878558deae0485b04dcbec2b6f4aa8137883dce0f6aae95c6
   requires_dist:
   - loguru
   - matplotlib
@@ -701,6 +710,7 @@ packages:
   - tqdm
   - simple-mri
   - panta-rhei
+  - click
   requires_python: '>=3.9,<3.13'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/30/cb/44245b93105e93ca0223f4dfbfd199803b10770e79dee63f63cb755570e0/gmsh-4.13.1-py2.py3-none-manylinux_2_24_x86_64.whl
@@ -2290,10 +2300,10 @@ packages:
   version: '24.2'
   sha256: 09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759
   requires_python: '>=3.8'
-- pypi: https://files.pythonhosted.org/packages/cc/55/f09223d75061e2bf6006e8484fcc0278d1b2691c6e6e0988730907b5d5c8/panta_rhei-0.6.0-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/25/33/c512e0b416f9f7d1368c333609fc0883c78a5fd205976cd99885a2707788/panta_rhei-0.6.1-py3-none-any.whl
   name: panta-rhei
-  version: 0.6.0
-  sha256: 64f6e2ebe6939a27abe4d0b3fb163301e149af0dba26e6ef2825438185c4b402
+  version: 0.6.1
+  sha256: e8fd678234cb875f35b79d1d5a6d27926d4c3373a769282d23e173d584af0e42
   requires_dist:
   - loguru
   - sympy
