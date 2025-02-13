@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import click
 import numpy as np
@@ -44,9 +45,11 @@ def mask_csf(input: Path, output: Path, connectivity: int = 2, li: bool = False)
 
 def create_csf_mask(
     vol: np.ndarray,
-    connectivity: int = 2,
+    connectivity: Optional[int] = 2,
     use_li: bool = False,
 ) -> np.ndarray:
+    # TODO: Check difference as a result of using vol.ndim connectivity
+    connectivity = connectivity or vol.ndim
     if use_li:
         thresh = skimage.filters.threshold_li(vol)
         binary = vol > thresh
