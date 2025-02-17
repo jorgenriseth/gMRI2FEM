@@ -42,10 +42,10 @@ def collect_mesh_data(
 
 
 @click.command()
-@click.option("--domain", "domain_data", type=Path)
-@click.option("--dti_data", type=Path)
-@click.option("--concentration_data", type=Path)
-@click.option("--parcellation_data", type=Path)
-@click.option("--output", type=Path)
+@click.option("--domain", "domain_data", type=Path, required=True)
+@click.option("--dti_data", type=Path, required=True)
+@click.option("--concentration_data", type=Path, required=True)
+@click.option("--parcellation_data", type=Path, required=True)
+@click.option("--output", type=Path, required=True)
 def collect(*args, **kwargs):
     collect_mesh_data(*args, **kwargs)

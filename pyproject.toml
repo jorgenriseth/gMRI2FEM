@@ -22,7 +22,8 @@ dependencies = [
     "scipy",
     "tqdm",
     "simple-mri",
-    "panta-rhei"
+    "panta-rhei",
+    "click"
 ]
 
 [project.scripts]

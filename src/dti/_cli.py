@@ -5,11 +5,11 @@ from _cli import LazyGroup
 @click.group(
     cls=LazyGroup,
     lazy_subcommands={
-        "mesh_generation": "brainmeshing.mesh_generation.meshgen",
-        "process_surfaces": "brainmeshing.mesh_generation.process_surfaces",
+        "reslice-dti": "dti.reslice_dti.reslice_dti",
+        "clean": "dti.clean_dti_data.clean",
+        "eddy-index": "dti.utils.create_eddy_index_file",
+        "topup-params": "dti.utils.create_topup_params_file",
     },
 )
 def dti():
-    from dti.reslice_dti import reslice_dti
-    from dti.clean_dti_data import clean
-    from dti.utils import create_eddy_index_file, create_topup_params_file
+    pass

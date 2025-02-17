@@ -1,0 +1,35 @@
+name: gmri2fem
+channels:
+- conda-forge
+- bioconda
+- jorgenriseth
+- nodefaults
+dependencies:
+- python >=3.9,<3.12
+- snakemake >=8
+- numpy
+- matplotlib
+- jupyter
+- nibabel
+- scikit-image
+- scipy
+- svmtk
+- pyvista
+- trame
+- colorcet
+- imageio-ffmpeg
+- tqdm
+- pantarei
+- pymeshfix
+- cxx-compiler <1.7
+- fenics >=2019
+- dcm2niix
+- h5py >=3
+- pydantic-settings
+- simple-mri
+- setuptools
+- loguru
+- meshio
+- pip
+- pip:
+  - wildmeshing
