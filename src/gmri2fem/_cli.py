@@ -11,7 +11,7 @@ from _cli import LazyGroup
         "mixed-t1map": "gmri2fem.mixed_t1map.mixed_t1map",
         "looklocker-t1map": "gmri2fem.looklocker_t1map.looklocker_t1map",
         "hybrid-t1map": "gmri2fem.hybrid_t1map.hybrid_t1map",
-        "looklocker_t1_postprocessing": "gmri2fem.t1maps.looklocker_t1_postprocessing",
+        "looklocker-t1-postprocessing": "gmri2fem.t1maps.looklocker_t1_postprocessing",
         "t1-to-r1": "gmri2fem.t1maps.T1_to_R1",
         "t1w-sigdiff": "gmri2fem.t1_weighted.T1w_sigdiff",
         "t1w-normalize": "gmri2fem.t1_weighted.T1w_normalize",
