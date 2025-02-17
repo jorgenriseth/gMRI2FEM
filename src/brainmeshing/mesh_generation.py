@@ -49,7 +49,6 @@ def create_cerebral_mesh(
         f"Creating cerebral mesh from {fs_dir} -> {output} with resolution {resolution}"
     )
     Path(surface_dir).mkdir(exist_ok=True)
-    print(fs_dir)
     seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
     ventricles = extract_ventricle_surface(
         seg_mri,
@@ -210,4 +209,3 @@ def extract_subcortical_gm(
 
 if __name__ == "__main__":
     meshgen()
-
