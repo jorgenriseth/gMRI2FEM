@@ -75,7 +75,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgomp-14.2.0-h77fa898_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgpg-error-1.51-hbd13f7d_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libhwloc-2.11.2-default_h0d58e46_1001.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.17-hd590300_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.18-h4ce23a2_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libklu-2.3.5-ss783_hfbdfdfc.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liblapack-3.9.0-8_h3b12eaf_netlib.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libldl-3.3.2-ss783_h2377355.conda
@@ -90,7 +90,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libscotch-7.0.6-hea33c07_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libspex-3.2.1-ss783_h5a7e440.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libspqr-4.3.4-ss783_hae1ff0d.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.48.0-hee588c1_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.49.1-hee588c1_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libssh2-1.11.1-hf672d98_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-14.2.0-hc0a3c3a_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/libstdcxx-devel_linux-64-13.3.0-h84ea5a7_101.conda
@@ -184,7 +184,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f0/cc/1a58efefb9b17c60d15626b33416728003028d5d51f0521482151a222560/scikit_image-0.24.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/35/f5/d0ad1a96f80962ba65e2ce1de6a1e59edecd1f0a7b55990ed208848012e0/scipy-1.13.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/2f/4b/ea1c1c4ecaa97baf8001568d502eaff1bbc3d5c1b48cce3f3fd5a77b8f52/scooby-0.10.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/e0/26/3ac7a28bd5812d3862c2493a173971549500308b7f492b2343f5b1dfdce2/simple_mri-0.1.5-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/b9/ef0df29f7d69dc21def0ab0ddccd7521f08d47c97e01969b90c6611c229e/simple_mri-0.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3a/4f/73714b1c1d339b1545cac28764e39f88c69468b5e10e51f327f9aa9d55b9/tifffile-2024.8.30-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
@@ -703,7 +703,7 @@ packages:
 - pypi: .
   name: gmri2fem
   version: 0.0.1
-  sha256: 9adbbac2ca6b2c6878558deae0485b04dcbec2b6f4aa8137883dce0f6aae95c6
+  sha256: 1cd65b7e137e584af21fc782c71dd9b664b9dd732551fad95366a126d94183fc
   requires_dist:
   - loguru
   - matplotlib
@@ -717,7 +717,7 @@ packages:
   - scikit-image
   - scipy
   - tqdm
-  - simple-mri
+  - simple-mri>=0.1.6
   - panta-rhei
   - click
   requires_python: '>=3.9,<3.13'
@@ -1044,6 +1044,7 @@ packages:
   constrains:
   - libcblas =3.9.0=28*_blis
   - blas =2.128=blis
+  - mkl <2025
   arch: x86_64
   platform: linux
   track_features:
@@ -1135,6 +1136,7 @@ packages:
   - libblas 3.9.0 28_h66dfbfd_blis
   constrains:
   - blas =2.128=blis
+  - mkl <2025
   arch: x86_64
   platform: linux
   track_features:
@@ -1430,17 +1432,18 @@ packages:
   purls: []
   size: 2423200
   timestamp: 1731374922090
-- conda: https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.17-hd590300_2.conda
-  sha256: 8ac2f6a9f186e76539439e50505d98581472fedb347a20e7d1f36429849f05c9
-  md5: d66573916ffcf376178462f1b61c941e
+- conda: https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.18-h4ce23a2_0.conda
+  sha256: 659a83c0c184a30336ca512d670a7db56bfb5e289caa9ee641e6f78fd2326463
+  md5: 0743bcd51fc4e6e0367e0aaf41e9bebc
   depends:
-  - libgcc-ng >=12
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=13
   arch: x86_64
   platform: linux
   license: LGPL-2.1-only
   purls: []
-  size: 705775
-  timestamp: 1702682170569
+  size: 713745
+  timestamp: 1739866934640
 - conda: https://conda.anaconda.org/conda-forge/linux-64/libklu-2.3.5-ss783_hfbdfdfc.conda
   build_number: 2
   sha256: 769af422c4176e18e3479eb818e132b32988990580cda611ae6fffc94e97937b
@@ -1476,6 +1479,8 @@ packages:
   - libgcc >=13
   - libgfortran
   - libgfortran5 >=13.3.0
+  constrains:
+  - mkl <2025
   arch: x86_64
   platform: linux
   track_features:
@@ -1672,9 +1677,9 @@ packages:
   purls: []
   size: 202202
   timestamp: 1733999561762
-- conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.48.0-hee588c1_1.conda
-  sha256: 22853d289ef6ec8a5b20f1aa261895b06525439990d3b139f8bfd0b5c5e32a3a
-  md5: 3fa05c528d8a1e2a67bbf1e36f22d3bc
+- conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.49.1-hee588c1_0.conda
+  sha256: 2094ebed4627d3ae6370f9e6ae8937e0ec6726f677b76efec0f35e1ea46ecbc1
+  md5: 782d806291be26eba7db79858a343919
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
@@ -1683,8 +1688,8 @@ packages:
   platform: linux
   license: Unlicense
   purls: []
-  size: 878223
-  timestamp: 1737564987837
+  size: 918152
+  timestamp: 1739903912942
 - conda: https://conda.anaconda.org/conda-forge/linux-64/libssh2-1.11.1-hf672d98_0.conda
   sha256: 0407ac9fda2bb67e11e357066eff144c845801d00b5f664efbc48813af1e7bb9
   md5: be2de152d8073ef1c01b7728475f2fe7
@@ -2764,13 +2769,13 @@ packages:
   - pkg:pypi/setuptools?source=hash-mapping
   size: 775598
   timestamp: 1736512753595
-- pypi: https://files.pythonhosted.org/packages/e0/26/3ac7a28bd5812d3862c2493a173971549500308b7f492b2343f5b1dfdce2/simple_mri-0.1.5-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/1c/b9/ef0df29f7d69dc21def0ab0ddccd7521f08d47c97e01969b90c6611c229e/simple_mri-0.1.6-py3-none-any.whl
   name: simple-mri
-  version: 0.1.5
-  sha256: e53e1b4b3b65a87911d12d27e952bed749d8f021d7f6c985755310fb4eb0973e
+  version: 0.1.6
+  sha256: 4b68675410168df3bc64252f00133ee9c3b7bca9b011d51421808bab91e4af2d
   requires_dist:
   - nibabel>=5.0.0
-  - numpy
+  - numpy>=1.0.0
   requires_python: '>=3.9'
 - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.17.0-pyhd8ed1ab_0.conda
   sha256: 41db0180680cc67c3fa76544ffd48d6a5679d96f4b71d7498a759e94edc9a2db
