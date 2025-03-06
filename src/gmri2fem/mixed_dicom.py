@@ -1,7 +1,12 @@
+import click
 import nibabel
 import pydicom
 import numpy as np
 import simple_mri as sm
+import json
+import subprocess
+
+from typing import Optional
 
 from pathlib import Path
 from loguru import logger
@@ -16,7 +21,55 @@ VOLUME_LABELS = [
 ]
 
 
-def dcm2nii_mixed(dcmpath: Path, subvolumes: list[str]):
+@click.command("dcm2nii-mixed")
+@click.argument("dcmpath", type=Path, required=True)
+@click.argument("outpath", type=Path, required=True)
+@click.option("--subvolumes", type=str, multiple=True, default=None)
+def dcm2nii_mixed_cli(*args, **kwargs):
+    dcm2nii_mixed(*args, **kwargs)
+
+
+def dcm2nii_mixed(
+    dcmpath: Path,
+    outpath: Path,
+    subvolumes: Optional[list[str]] = None,
+):
+    subvolumes = subvolumes or VOLUME_LABELS
+    assert all(
+        [volname in VOLUME_LABELS for volname in subvolumes]
+    ), f"Invalid subvolume name in {subvolumes}, not in {VOLUME_LABELS}"
+    outdir, form = outpath.parent, outpath.stem
+    outdir.mkdir(exist_ok=True, parents=True)
+
+    vols = extract_mixed_dicom(dcmpath, subvolumes)
+    meta = {}
+    for vol, volname in zip(vols, subvolumes):
+        output = outpath.with_name(outpath.stem + "_" + volname + ".nii.gz")
+
+        nii = vol["nifti"]
+        descrip = vol["descrip"]
+        nibabel.nifti1.save(nii, output)
+        if volname == "SE-modulus":
+            meta["TR_SE"] = descrip["TR"]
+            meta["TE"] = descrip["TE"]
+        elif volname == "IR-corrected-real":
+            meta["TR_IR"] = descrip["TR"]
+            meta["TI"] = descrip["TI"]
+
+    with open(outpath.parent / f"{form}_meta.json", "w") as f:
+        json.dump(meta, f)
+
+    try:
+        cmd = f"dcm2niix -w 0 --terse -b o -f '{form}' -o '{outdir}' '{dcmpath}' >> /tmp/dcm2niix.txt "
+        subprocess.run(cmd, shell=True).check_returncode()
+    except (ValueError, subprocess.CalledProcessError) as e:
+        print(str(e))
+        pass
+
+    pass
+
+
+def extract_mixed_dicom(dcmpath: Path, subvolumes: list[str]):
     dcm = pydicom.dcmread(dcmpath)
     frames_total = int(dcm.NumberOfFrames)
     frames_per_volume = dcm[0x2001, 0x1018].value  # [Number of Slices MR]

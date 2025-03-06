@@ -1,6 +1,7 @@
 import pydicom
 import numpy as np
 import simple_mri as sm
+import click
 
 from pathlib import Path
 import shutil
@@ -18,7 +19,7 @@ def read_dicom_trigger_times(dicomfile):
     return np.unique(all_frame_times)
 
 
-def dcm2niix_looklocker(dicomfile, outpath):
+def dcm2nii_looklocker(dicomfile, outpath):
     outdir, form = outpath.parent, outpath.stem
     outdir.mkdir(exist_ok=True, parents=True)
     times = read_dicom_trigger_times(dicomfile)
@@ -26,7 +27,7 @@ def dcm2niix_looklocker(dicomfile, outpath):
 
     with tempfile.TemporaryDirectory(prefix=outpath.stem) as tmpdir:
         tmppath = Path(tmpdir)
-        cmd = f"dcm2niix -f {form} -z y --ignore_trigger_times -o {tmppath} {dicomfile} > /tmp/dcm2niix.txt"
+        cmd = f"dcm2niix -f {form} -z y --ignore_trigger_times -o '{tmppath}' '{dicomfile}' > /tmp/dcm2niix.txt"
         subprocess.run(cmd, shell=True, check=True)
         shutil.copy(
             tmppath / f"{form}.json",
@@ -36,3 +37,10 @@ def dcm2niix_looklocker(dicomfile, outpath):
         sm.save_mri(
             mri, outpath.with_suffix(".nii.gz"), dtype=np.single, intent_code=2001
         )
+
+
+@click.command()
+@click.option("--dicomfile", type=Path, required=True)
+@click.option("--outpath", type=Path, required=True)
+def dcm2nii_looklocker_cli(*args, **kwargs):
+    dcm2nii_looklocker(*args, **kwargs)
