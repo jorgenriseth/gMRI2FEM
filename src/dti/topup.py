@@ -1,11 +1,12 @@
 import tempfile
 import re
+import json
 from pathlib import Path
 from typing import Optional
 
 import subprocess
 
-from dti.utils import mri_number_of_frames, readout_time, with_suffix
+from dti.utils import mri_number_of_frames, with_suffix
 
 
 def topup(dti, topup_b0, outputdir: Path, tmppath: Optional[Path] = None):
@@ -14,7 +15,7 @@ def topup(dti, topup_b0, outputdir: Path, tmppath: Optional[Path] = None):
         tmppath = Path(tmpdir.name)
 
     dti_b0 = tmppath / dti.name.replace("DTI.nii.gz", "b0.nii.gz")
-    cmd_extract_b0 = f"fslroi {dti} {dti_b0} 150 10"
+    cmd_extract_b0 = f"fslroi {dti} {dti_b0} 150 10"  # TODO: Figure out a way to read start/stop from file.
     subprocess.run(cmd_extract_b0, shell=True, check=True)
 
     str_base = common_prefix(Path(dti).name, Path(topup_b0).name)
@@ -54,3 +55,9 @@ def common_prefix(str1, str2):
                 return "_".join(parts[:-1])
             return str1[:idx]
     return ""
+
+
+def readout_time(sidecar: Path) -> str:
+    with open(sidecar, "r") as f:
+        meta = json.load(f)
+    return meta["EstimatedTotalReadoutTime"]
