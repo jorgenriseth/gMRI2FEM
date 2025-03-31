@@ -22,7 +22,9 @@ def eddy_correct(
     create_eddy_index_file(dti, index_file)
 
     mask = tmppath / "topup_mask.nii.gz"
-    create_mask(topup_b0_mean, mask, threshold=0.2)
+    create_mask(
+        topup_b0_mean, Path(str(mask).replace("_mask.nii.gz", "")), threshold=0.2
+    )
 
     bvecs = with_suffix(dti, ".bvec")
     bvals = with_suffix(dti, ".bval")

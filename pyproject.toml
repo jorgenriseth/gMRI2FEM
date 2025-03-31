@@ -1,29 +1,27 @@
 [project]
 name = "gmri2fem"
-authors = [
-    {name = "Jørgen Riseth", email = "jnriseth@gmail.com"},
-]
-version = "0.0.1"
+authors = [{ name = "Jørgen Riseth", email = "jnriseth@gmail.com" }]
+version = "0.1.3"
 requires-python = ">=3.9,<3.13"
 description = "Processing pipeline for glymphatic MRI."
 readme = "README.md"
-license = {file = "LICENSE"} 
+license = { file = "LICENSE" }
 dependencies = [
-    "loguru",
-    "matplotlib",
-    "meshio",
-    "nibabel",
-    "numpy",
-    "pint",
-    "pydicom",
-    "pymeshfix",
-    "pyvista",
-    "scikit-image",
-    "scipy",
-    "tqdm",
-    "simple-mri",
-    "panta-rhei",
-    "click"
+  "loguru",
+  "matplotlib",
+  "meshio",
+  "nibabel",
+  "numpy",
+  "pint",
+  "pydicom",
+  "pymeshfix",
+  "pyvista",
+  "scikit-image",
+  "scipy",
+  "tqdm",
+  "simple-mri",
+  "panta-rhei",
+  "click",
 ]
 
 [project.scripts]
@@ -34,7 +32,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.mypy]
 plugins = "numpy.typing.mypy_plugin"
