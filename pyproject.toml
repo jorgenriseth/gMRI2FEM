@@ -5,7 +5,7 @@ version = "0.1.0"
 requires-python = ">=3.9,<3.13"
 description = "Processing pipeline for glymphatic MRI."
 readme = "README.md"
-license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 dependencies = [
   "loguru",
   "matplotlib",
