@@ -1,0 +1,40 @@
+name: PyPI publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out the repository code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+              3.9
+              3.10
+              3.11
+              3.12
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install build twine
+          
+      - name: Build the package
+        run: |
+          python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: '__token__'
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+        run: |
+          python -m twine upload --skip-existing dist/*
