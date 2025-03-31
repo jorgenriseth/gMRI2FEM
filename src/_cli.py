@@ -38,7 +38,8 @@ class LazyGroup(click.Group):
         "dti": "dti._cli.dti",
         "brainmeshing": "brainmeshing._cli.brainmeshing",
         "i2m": "i2m._cli.i2m",
-        "dcm2nii-mixed": "gmri2fem._cli.dcm2nii_mixed",
+        "dcm2nii-mixed": "gmri2fem.mixed_dicom.dcm2nii_mixed_cli",
+        "dcm2nii-ll": "gmri2fem.ll_dicom.dcm2nii_looklocker_cli",
     },
 )
 def gmri2fem():
