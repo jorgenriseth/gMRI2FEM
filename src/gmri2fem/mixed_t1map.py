@@ -86,13 +86,7 @@ def process_mixed_t1map(
     T1map_nii = estimate_T1_mixed(se, ir, meta, T1_low=t1_low, T1_hi=t1_high)
     nibabel.nifti1.save(T1map_nii, output)
     if postprocessed is not None:
-        mask = mask_csf(se)
-        masked_T1map = T1map_nii.get_fdata(dtype=np.single)
-        masked_T1map[~mask] = np.nan
-        masked_T1map_nii = nibabel.nifti1.Nifti1Image(
-            masked_T1map, T1map_nii.affine, T1map_nii.header
-        )
-        nibabel.nifti1.save(masked_T1map_nii, postprocessed)
+        mixed_t1_postprocessing(se, output, postprocessed)
 
 
 def mixed_t1_postprocessing(se: Path, t1: Path, output: Path):

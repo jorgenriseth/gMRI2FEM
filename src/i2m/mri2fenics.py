@@ -6,9 +6,69 @@ import nibabel
 import numpy as np
 import scipy
 import simple_mri as sm
+import pyvista as pv
 from pantarei import FenicsStorage
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
+from i2m.vtk2mri import mri_data_to_ndarray
+
+
+def mri2fem_interpolate_quadrature(data_mri, V_target, quad_degree, mask=None):
+    datamask = np.isfinite(data_mri.data)
+    if mask is not None:
+        datamask *= mask
+
+    domain = V_target.mesh()
+    quad_element = df.FiniteElement(
+        "Quadrature", domain.ufl_cell(), degree=quad_degree, quad_scheme="default"
+    )
+    Q = df.FunctionSpace(domain, quad_element)
+    dof_img_coordinates = locate_dof_voxels(Q, data_mri, rint=False)
+    dof_img_voxels = find_dof_nearest_neighbours(dof_img_coordinates, datamask, N=1)
+
+    dof_concentrations = data_mri.data[*dof_img_voxels]
+    assert np.isfinite(dof_concentrations).all()
+    q = df.Function(Q)
+    q.vector()[:] = dof_concentrations
+
+    dx = df.Measure("dx", metadata={"quadrature_degree": quad_degree})
+    u, v = df.TrialFunction(V_target), df.TestFunction(V_target)
+    a = u * v * dx
+    l = q * v * dx
+    A = df.assemble(a)
+    b = df.assemble(l)
+    uh = df.Function(V_target)
+    df.solve(A, uh.vector(), b)
+    return uh
+
+
+def dolfin_mesh_to_pyvista_ugrid(mesh):
+    # Extract the mesh coordinates and connectivity
+    coordinates = mesh.coordinates()
+    cells = mesh.cells()
+    num_cells = cells.shape[0]
+    num_points_per_cell = 4
+    connectivity = np.hstack([np.full((num_cells, 1), num_points_per_cell), cells])
+    return pv.UnstructuredGrid(
+        connectivity, np.ones(num_cells) * pv.CellType.TETRA, coordinates
+    )
+
+
+def dolfin2mri(
+    u: df.Function,
+    reference_mri: sm.SimpleMRI,
+    grid: pv.UnstructuredGrid = None,
+    fieldname: str = "",
+):
+    ugrid = grid or dolfin_mesh_to_pyvista_ugrid(u.function_space().mesh())
+    fname = fieldname or "u"
+    ugrid.point_data[fname] = u.compute_vertex_values()
+
+    shape = reference_mri.shape
+    affine = reference_mri.affine
+    image_grid = pv.ImageData(dimensions=shape).transform(affine, inplace=False)
+    grid = image_grid.sample(ugrid, progress_bar=False, locator="static_cell")
+    return sm.SimpleMRI(mri_data_to_ndarray(grid, fname, shape), affine)
 
 
 def find_dof_nearest_neighbours(
@@ -42,7 +102,7 @@ def locate_dof_voxels(V: df.FunctionSpace, mri: sm.SimpleMRI, rint: bool = True)
     return img_space_coords
 
 
-def mri2fem_interpolate(
+def mri2fem_interpolate_collocation(
     D: np.ndarray,
     affine: np.ndarray,
     V: df.FunctionSpace,
@@ -69,7 +129,9 @@ def read_image(
 ) -> df.Function:
     mri_volume = nibabel.nifti1.load(filename)
     voxeldata = mri_volume.get_fdata(dtype=np.single)
-    return mri2fem_interpolate(voxeldata, mri_volume.affine, functionspace, datafilter)
+    return mri2fem_interpolate_collocation(
+        voxeldata, mri_volume.affine, functionspace, datafilter
+    )
 
 
 def fenicsstorage2xdmf(
