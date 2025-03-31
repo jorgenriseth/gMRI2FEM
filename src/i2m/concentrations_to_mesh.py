@@ -7,17 +7,17 @@ import dolfin as df
 import numpy as np
 import pandas as pd
 import pantarei as pr
-import scipy
 import skimage
 import tqdm
 from pantarei import FenicsStorage, fenicsstorage2xdmf
-from simple_mri import SimpleMRI, load_mri
+from simple_mri import load_mri
 
-from gmri2fem.utils import apply_affine, nan_filter_gaussian
+from gmri2fem.utils import nan_filter_gaussian, nearest_neighbour
 from i2m.mri2fenics import (
     find_boundary_dofs,
     find_dof_nearest_neighbours,
     locate_dof_voxels,
+    mri2fem_interpolate_quadrature,
 )
 
 
@@ -49,22 +49,6 @@ def smooth_dilation(D: np.ndarray, sigma: float, truncate: float = 4) -> np.ndar
     return np.where(np.isfinite(D), D, nan_filter_gaussian(D, sigma, truncate))
 
 
-def nearest_neighbour(
-    D: np.ndarray, inds: np.ndarray, valid_indices: Optional[np.ndarray] = None
-) -> np.ndarray:
-    i, j, k = inds.T
-    if valid_indices is None:
-        I, J, K = np.array(np.where(np.isfinite(D)))
-    else:
-        I, J, K = valid_indices
-    interp = scipy.interpolate.NearestNDInterpolator(np.array((I, J, K)).T, D[I, J, K])
-    D_out = D.copy()
-    D_out[i, j, k] = interp(i, j, k)
-    num_nan_values = (~np.isfinite(D_out[i, j, k])).sum()
-    assert num_nan_values == 0
-    return D_out
-
-
 def smooth_extension(D, inds, sigma, truncate, maxiter=10, fallback=True):
     i, j, k = inds.T
     num_nan_values = (~np.isfinite(D[i, j, k])).sum()
@@ -91,6 +75,9 @@ def map_concentration(
     femfamily: str,
     femdegree: int,
     visualdir: Optional[Path] = None,
+    collocation: bool = False,
+    collocation_npoints: int = 10,
+    quad_degree: int = 6,
 ):
     csf_mask_mri = load_mri(csfmask_path, dtype=bool)
     csf_mask = skimage.morphology.binary_erosion(
@@ -108,7 +95,7 @@ def map_concentration(
 
     boundary_dofs = find_boundary_dofs(V)
     boundary_dof_neighbours = find_dof_nearest_neighbours(
-        dof_voxels[boundary_dofs], csf_mask, N=10
+        dof_voxels[boundary_dofs], csf_mask, N=collocation_npoints
     )
     assert len(concentration_paths) > 0
     assert len(timestamps) == len(concentration_paths)
@@ -121,7 +108,7 @@ def map_concentration(
         boundary_dof_neighbours = find_dof_nearest_neighbours(
             dof_voxels[boundary_dofs],
             csf_mask * valid_concentrations,
-            N=10,
+            N=collocation_npoints,
         )
         u_boundary = df.Function(V)
         u_boundary.vector()[boundary_dofs] = np.nanmedian(
@@ -129,13 +116,18 @@ def map_concentration(
         )
         outfile.write_checkpoint(u_boundary, name="boundary_concentration", t=ti)
 
-        dof_neighbours = find_dof_nearest_neighbours(
-            dof_voxels, ~csf_mask * valid_concentrations, N=10
-        )
-        u_internal = df.Function(V)
-        u_internal.vector()[:] = np.nanmedian(
-            concentration_mri.data[*dof_neighbours], axis=0
-        )
+        if collocation:
+            dof_neighbours = find_dof_nearest_neighbours(
+                dof_voxels, ~csf_mask * valid_concentrations, N=collocation_npoints
+            )
+            u_internal = df.Function(V)
+            u_internal.vector()[:] = np.nanmedian(
+                concentration_mri.data[*dof_neighbours], axis=0
+            )
+        else:
+            u_internal = mri2fem_interpolate_quadrature(
+                concentration_mri, V, quad_degree, mask=(~csf_mask)
+            )
         outfile.write_checkpoint(u_internal, name="concentration", t=ti)
     outfile.close()
 
@@ -162,13 +154,17 @@ def map_concentration(
 @click.option("--output", type=Path, required=True)
 @click.option("--femfamily", type=str, default="CG")
 @click.option("--femdegree", type=int, default=1)
+@click.option("--subject_regex", type=str)
 @click.option("--visualdir", type=Path)
-def concentrations2mesh(concentration_paths, **kwargs):
-    subject_re = re.compile(r"(?P<subject>sub-(control|patient)*\d{2})")
+def concentrations2mesh(concentration_paths, subject_regex, **kwargs):
+    subject_regex = subject_regex or r"sub-(control|patient)*\d{2}"
+    subject_re = re.compile(rf"(?P<subject>{subject_regex})")
     m = subject_re.search(str(concentration_paths[0]))
     if m is None:
         raise ValueError(f"Couldn't find subject in path {concentration_paths[0]}")
-    map_concentration(m.groupdict()["subject"], concentration_paths, **kwargs)
+    map_concentration(
+        m.groupdict()["subject"], concentration_paths, **kwargs, collocation=False
+    )
 
 
 if __name__ == "__main__":
