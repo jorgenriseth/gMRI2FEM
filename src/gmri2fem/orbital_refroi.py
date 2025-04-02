@@ -30,9 +30,9 @@ def orbital_refroi(t1w_dir, segmentation, output, side):
 
     # LUT-values of regions to look for to find slice in R,A,S-directions respectively
     if side == "left":
-        axes_seg_indices = [1012, 1027, 1033]
+        axes_seg_indices = [1012, 1027, 18]
     else:
-        axes_seg_indices = [2012, 2027, 2033]
+        axes_seg_indices = [2012, 2027, 54]
     centers = [
         [np.rint(x.mean()).astype(int) for x in np.where(seg_data == label)][idx]
         for idx, label in enumerate(axes_seg_indices)
