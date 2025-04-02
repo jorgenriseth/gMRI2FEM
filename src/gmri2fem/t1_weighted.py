@@ -1,6 +1,6 @@
-import click
 from pathlib import Path
 
+import click
 import numpy as np
 import simple_mri as sm
 

@@ -1,13 +1,13 @@
-import click
-import nibabel
-import matplotlib.pyplot as plt
-import numpy as np
-import skimage
-import scipy
-from scipy.stats import multivariate_normal
-
-from pathlib import Path
 import itertools
+from pathlib import Path
+
+import click
+import matplotlib.pyplot as plt
+import nibabel
+import numpy as np
+import scipy
+import skimage
+from scipy.stats import multivariate_normal
 
 from gmri2fem.utils import largest_island
 

@@ -1,5 +1,6 @@
-import click
 import importlib
+
+import click
 
 
 class LazyGroup(click.Group):

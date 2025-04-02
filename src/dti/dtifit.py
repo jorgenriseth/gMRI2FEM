@@ -1,10 +1,10 @@
-from re import subn
 import subprocess
 import tempfile
 from pathlib import Path
+from re import subn
 from typing import Optional
 
-from dti.utils import with_suffix, create_mask
+from dti.utils import create_mask, with_suffix
 
 
 def dtifit(

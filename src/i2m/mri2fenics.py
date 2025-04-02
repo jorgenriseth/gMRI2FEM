@@ -4,9 +4,9 @@ from typing import Callable, Optional
 import dolfin as df
 import nibabel
 import numpy as np
+import pyvista as pv
 import scipy
 import simple_mri as sm
-import pyvista as pv
 from pantarei import FenicsStorage
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian

@@ -1,10 +1,9 @@
 from pathlib import Path
-
 from typing import Optional
+
 import click
 import numpy as np
-
-from simple_mri import load_mri, save_mri, SimpleMRI, assert_same_space
+from simple_mri import SimpleMRI, assert_same_space, load_mri, save_mri
 
 
 def concentration_from_T1(T1: np.ndarray, T1_0: np.ndarray, r1: float) -> np.ndarray:

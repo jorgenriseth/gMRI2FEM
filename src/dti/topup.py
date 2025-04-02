@@ -1,10 +1,9 @@
-import tempfile
-import re
 import json
+import re
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Optional
-
-import subprocess
 
 from dti.utils import mri_number_of_frames, with_suffix
 

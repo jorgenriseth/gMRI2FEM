@@ -1,4 +1,5 @@
 import click
+
 from _cli import LazyGroup
 
 
@@ -15,9 +16,7 @@ def brainmeshing():
     pass
 
 
-from brainmeshing.mesh_generation import meshgen
-from brainmeshing.mesh_generation import process_surfaces
-from brainmeshing.mesh_generation import extract_ventricles
+from brainmeshing.mesh_generation import extract_ventricles, meshgen, process_surfaces
 
 brainmeshing.add_command(meshgen)
 brainmeshing.add_command(process_surfaces)

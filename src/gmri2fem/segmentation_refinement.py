@@ -1,16 +1,16 @@
 import itertools
+from enum import Enum
 from pathlib import Path
 
 import click
 import numpy as np
 import scipy
+import simple_mri as sm
 import skimage
 import tqdm
+from simple_mri import SimpleMRI, assert_same_space, load_mri, save_mri
 
 from gmri2fem.utils import apply_affine
-import simple_mri as sm
-from simple_mri import load_mri, SimpleMRI, save_mri, assert_same_space
-from enum import Enum
 
 
 class DTYPE(Enum):

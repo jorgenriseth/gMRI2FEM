@@ -4,10 +4,10 @@ from pathlib import Path
 import nibabel.nifti1 as nifti1
 import numpy as np
 import pandas as pd
+from simple_mri import assert_same_space, load_mri
 from tqdm import tqdm
 
 from gmri2fem.segmentation_groups import default_segmentation_groups
-from simple_mri import load_mri, assert_same_space
 
 
 def create_dataframe(

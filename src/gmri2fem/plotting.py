@@ -1,11 +1,11 @@
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import nibabel.nifti1 as nifti1
 import numpy as np
 import pandas as pd
-import nibabel.nifti1 as nifti1
 import skimage
 
 mpl.rcParams.update({"font.size": 14})

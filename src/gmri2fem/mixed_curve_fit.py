@@ -3,9 +3,9 @@ from pathlib import Path
 
 import nibabel
 import numpy as np
+import pandas as pd
 import scipy
 import tqdm
-import pandas as pd
 from loguru import logger
 from scipy.optimize import OptimizeWarning
 
