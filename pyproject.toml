@@ -15,13 +15,14 @@ dependencies = [
   "pint",
   "pydicom",
   "pymeshfix",
-  "pyvista",
   "scikit-image",
   "scipy",
   "tqdm",
   "simple-mri>=0.1.6",
   "panta-rhei",
   "click",
+  "vtk",
+  "pyvista[all]",
 ]
 
 [project.scripts]

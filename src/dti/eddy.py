@@ -12,7 +12,9 @@ def eddy_correct(
     acq_params,
     output: Path,
     multiband_factor: int = 1,
+    nthreads: int = 1,
     tmppath: Optional[Path] = None,
+    verbose: bool = False,
 ):
     if tmppath is None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -40,6 +42,8 @@ def eddy_correct(
         + f" --out={output.parent / output.stem.split('.')[0]}"
         + f" --ol_type=both"
         + f" --mb={multiband_factor}"
+        + f" --nthr={nthreads}"
+        + " --verbose" * verbose
     )
     subprocess.run(eddy_cmd, shell=True, check=True)
 
