@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 import numpy as np
 import scipy
-
 from simple_mri import SimpleMRI, load_mri, save_mri
 
 

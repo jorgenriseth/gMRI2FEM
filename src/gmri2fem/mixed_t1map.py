@@ -8,9 +8,9 @@ import numpy as np
 import scipy
 import skimage
 from numpy.lib.stride_tricks import sliding_window_view
+from simple_mri import load_mri
 
 from gmri2fem.masking import create_csf_mask
-from simple_mri import load_mri
 
 
 def T1_lookup_table(

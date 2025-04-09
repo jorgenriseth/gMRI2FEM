@@ -1,6 +1,6 @@
-import simple_mri as sm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import simple_mri as sm
 import skimage
 
 

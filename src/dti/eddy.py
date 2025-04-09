@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from dti.utils import mri_number_of_frames, with_suffix, create_mask
+from dti.utils import create_mask, mri_number_of_frames, with_suffix
 
 
 def eddy_correct(
@@ -12,7 +12,9 @@ def eddy_correct(
     acq_params,
     output: Path,
     multiband_factor: int = 1,
+    nthreads: int = 1,
     tmppath: Optional[Path] = None,
+    verbose: bool = False,
 ):
     if tmppath is None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -22,7 +24,9 @@ def eddy_correct(
     create_eddy_index_file(dti, index_file)
 
     mask = tmppath / "topup_mask.nii.gz"
-    create_mask(topup_b0_mean, mask, threshold=0.2)
+    create_mask(
+        topup_b0_mean, Path(str(mask).replace("_mask.nii.gz", "")), threshold=0.2
+    )
 
     bvecs = with_suffix(dti, ".bvec")
     bvals = with_suffix(dti, ".bval")
@@ -38,6 +42,8 @@ def eddy_correct(
         + f" --out={output.parent / output.stem.split('.')[0]}"
         + f" --ol_type=both"
         + f" --mb={multiband_factor}"
+        + f" --nthr={nthreads}"
+        + " --verbose" * verbose
     )
     subprocess.run(eddy_cmd, shell=True, check=True)
 

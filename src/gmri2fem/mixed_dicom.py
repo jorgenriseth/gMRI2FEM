@@ -1,14 +1,13 @@
-import click
-import nibabel
-import pydicom
-import numpy as np
-import simple_mri as sm
 import json
 import subprocess
-
+from pathlib import Path
 from typing import Optional
 
-from pathlib import Path
+import click
+import nibabel
+import numpy as np
+import pydicom
+import simple_mri as sm
 from loguru import logger
 
 VOLUME_LABELS = [

@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Required
+
 import click
+
 from _cli import LazyGroup
 
 
@@ -35,7 +37,9 @@ def topup_cli(**kwargs):
 @click.option("--acq_params", "-a", type=Path, required=True)
 @click.option("--output", "-o", type=Path, required=True)
 @click.option("--multiband_factor", "--mb", type=int, default=1)
+@click.option("--nthreads", type=int, default=1)
 @click.option("--tmppath", type=Path)
+@click.option("--verbose", is_flag=True)
 def eddy_cli(**kwargs):
     from dti.eddy import eddy_correct
 

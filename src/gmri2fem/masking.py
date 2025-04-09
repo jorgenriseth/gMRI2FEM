@@ -4,7 +4,7 @@ from typing import Optional
 import click
 import numpy as np
 import skimage
-from simple_mri import load_mri, save_mri, SimpleMRI, assert_same_space
+from simple_mri import SimpleMRI, assert_same_space, load_mri, save_mri
 
 from gmri2fem.utils import largest_island
 

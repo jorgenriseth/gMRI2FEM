@@ -10,7 +10,12 @@ import SVMTK as svmtk
 import tqdm
 from loguru import logger
 
-from brainmeshing.utils import fs_surf_to_stl, pyvista2svmtk, svmtk2pyvista, repair_triangulation
+from brainmeshing.utils import (
+    fs_surf_to_stl,
+    pyvista2svmtk,
+    repair_triangulation,
+    svmtk2pyvista,
+)
 
 
 @click.command("separate-surfaces")

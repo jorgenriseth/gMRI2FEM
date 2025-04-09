@@ -5,6 +5,7 @@ import click
 import numpy as np
 import skimage
 from simple_mri import SimpleMRI, load_mri, save_mri
+
 from gmri2fem.utils import mri_facemask, nan_filter_gaussian
 
 

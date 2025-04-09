@@ -9,19 +9,20 @@ import skimage
 import SVMTK as svmtk
 from loguru import logger
 from pantarei.meshprocessing import mesh2xdmf, xdmf2hdf
+
 from brainmeshing.utils import (
     binary_image_surface_extraction,
     embed_overlapping,
     fs_surf_to_stl,
+    grow_white_connective_tissue,
+    pyvista2svmtk,
     repair_disconnected_triangulation,
     repair_svmtk,
     repair_triangulation,
     subdomain_mapper,
     surface_union,
-    pyvista2svmtk,
     svmtk2pyvista,
     taubin_svmtk,
-    grow_white_connective_tissue,
 )
 from brainmeshing.ventricles import extract_ventricle_surface
 from gmri2fem.segmentation_groups import default_segmentation_groups
@@ -44,11 +45,13 @@ def meshgen(**kwargs):
     generate_mesh(**kwargs)
 
 
-def process_cerebral_surfaces(
-    fs_dir: Path,
+@click.command("extract-ventricles")
+@click.option("--fs_dir", type=Path, required=True)
+@click.option("--surface_dir", type=Path, required=True)
+def extract_ventricles(
+    fs_dir: sm.SimpleMRI,
     surface_dir: Path,
 ):
-    logger.info(f"Processing surfaces from {fs_dir} -> {surface_dir}")
     Path(surface_dir).mkdir(exist_ok=True)
     seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
     ventricles = extract_ventricle_surface(
@@ -60,6 +63,24 @@ def process_cerebral_surfaces(
         dilate=0,
     )
     pv.save_meshio(f"{surface_dir}/ventricles.stl", ventricles)
+
+
+def process_cerebral_surfaces(
+    fs_dir: Path,
+    surface_dir: Path,
+):
+    logger.info(f"Processing surfaces from {fs_dir} -> {surface_dir}")
+    Path(surface_dir).mkdir(exist_ok=True)
+    seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
+    # ventricles = extract_ventricle_surface(
+    #     seg_mri,
+    #     initial_smoothing=0,
+    #     min_radius=3,
+    #     surface_smoothing=2,
+    #     taubin_iter=100,
+    #     dilate=0,
+    # )
+    # pv.save_meshio(f"{surface_dir}/ventricles.stl", ventricles)
 
     subcortical_gm = extract_subcortical_gm(seg_mri)
     pv.save_meshio(f"{surface_dir}/subcortical_gm.stl", subcortical_gm)
@@ -205,7 +226,3 @@ def extract_subcortical_gm(
     subcortical_svm = pyvista2svmtk(subcortical_gm)
     subcortical_gm = repair_disconnected_triangulation(svmtk2pyvista(subcortical_svm))
     return subcortical_gm
-
-
-if __name__ == "__main__":
-    meshgen()

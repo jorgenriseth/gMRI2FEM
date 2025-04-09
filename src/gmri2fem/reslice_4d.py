@@ -1,12 +1,13 @@
+import re
 import subprocess
 import tempfile
 from pathlib import Path
-import re
 from typing import Optional
+
+import click
 import tqdm
 
 from dti.utils import mri_number_of_frames
-import click
 
 
 # TODO: Incorporate to allow multiple files resliced simultaneously

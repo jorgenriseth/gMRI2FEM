@@ -1,8 +1,8 @@
 import itertools
 from pathlib import Path
 
-import nibabel.nifti1 as nifti1
 import nibabel.freesurfer.mghformat as mghformat
+import nibabel.nifti1 as nifti1
 import numpy as np
 import scipy
 import skimage

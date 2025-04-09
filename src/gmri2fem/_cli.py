@@ -1,7 +1,9 @@
 # ruff: disable=F401
-import click
 from pathlib import Path
 from typing import Optional
+
+import click
+
 from _cli import LazyGroup
 
 

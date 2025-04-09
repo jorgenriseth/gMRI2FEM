@@ -1,10 +1,10 @@
+import re
 from typing import Literal, Optional
 
 import numpy as np
 import scipy as sp
 import skimage
 import tqdm
-import re
 
 
 def apply_affine(T: np.ndarray, X: np.ndarray) -> np.ndarray:

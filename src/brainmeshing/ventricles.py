@@ -6,10 +6,11 @@ import numpy as np
 import pyvista as pv
 import scipy
 import skimage
-from simple_mri import SimpleMRI, load_mri
 from loguru import logger
-from gmri2fem.utils import segmentation_smoothing, largest_island
+from simple_mri import SimpleMRI, load_mri
+
 from brainmeshing.utils import binary_image_surface_extraction
+from gmri2fem.utils import largest_island, segmentation_smoothing
 
 V3 = 14
 V4 = 15
@@ -119,7 +120,6 @@ def image_data_to_grid(
     if to_cell:
         return point_volume.points_to_cells()
     return point_volume
-
 
 
 def connect_region_by_lines(

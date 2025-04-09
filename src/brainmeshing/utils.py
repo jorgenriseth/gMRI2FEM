@@ -2,16 +2,17 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Literal, Optional
-from scipy.spatial import KDTree
 
-import pyvista as pv
-import SVMTK as svmtk
 import dolfin as df
-import simple_mri as sm
-import skimage
 import numpy as np
 import pymeshfix
+import pyvista as pv
+import simple_mri as sm
+import skimage
+import SVMTK as svmtk
 from loguru import logger
+from scipy.spatial import KDTree
+
 from gmri2fem.utils import grow_restricted, largest_island
 
 WHITE = [2, 41]

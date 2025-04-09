@@ -1,20 +1,20 @@
-import re
-import os
-import json
+import contextlib
+import dataclasses
 import itertools
+import json
+import os
+import re
 from pathlib import Path
+from typing import Optional
+
+import click
+import matplotlib as mpl
 import numpy as np
+import pandas as pd
 import scipy
 import skimage
 import tqdm
-import dataclasses
-import click
-from typing import Optional
-import pandas as pd
-import matplotlib as mpl
-import contextlib
-
-from simple_mri import load_mri, SimpleMRI, save_mri
+from simple_mri import SimpleMRI, load_mri, save_mri
 
 
 def inverse_dict(index):

@@ -1,17 +1,17 @@
-import click
 import warnings
 from functools import partial
 from pathlib import Path
 from typing import Optional
 
+import click
 import numpy as np
 import scipy
 import skimage
 import tqdm
 from scipy.optimize import OptimizeWarning
-
-from gmri2fem.utils import nan_filter_gaussian, mri_facemask
 from simple_mri import SimpleMRI, load_mri, save_mri
+
+from gmri2fem.utils import mri_facemask, nan_filter_gaussian
 
 T1_ROOF = 10000
 

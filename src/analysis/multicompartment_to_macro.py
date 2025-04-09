@@ -4,7 +4,10 @@ from pathlib import Path
 import dolfin as df
 from pantarei.fenicsstorage import FenicsStorage
 
-from gmri2fem.models.multidiffusion_model import get_default_coefficients, print_progress
+from gmri2fem.models.multidiffusion_model import (
+    get_default_coefficients,
+    print_progress,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

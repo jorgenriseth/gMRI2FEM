@@ -5,8 +5,7 @@ from typing import Optional
 
 import click
 import numpy as np
-
-from simple_mri import load_mri, SimpleMRI, save_mri
+from simple_mri import SimpleMRI, load_mri, save_mri
 
 from gmri2fem.reslice_4d import reslice_4d
 

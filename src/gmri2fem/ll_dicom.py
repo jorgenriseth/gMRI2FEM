@@ -1,13 +1,12 @@
-import pydicom
-import numpy as np
-import simple_mri as sm
-import click
-
-from pathlib import Path
 import shutil
 import subprocess
-
 import tempfile
+from pathlib import Path
+
+import click
+import numpy as np
+import pydicom
+import simple_mri as sm
 
 
 def read_dicom_trigger_times(dicomfile):
