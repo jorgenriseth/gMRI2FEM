@@ -105,12 +105,6 @@ def threshold_weighted_image(volume: np.ndarray, weighting: np.ndarray):
 def aggregate_session_masks(masks: list[np.ndarray]) -> np.ndarray:
     roi = np.prod(masks, axis=0).astype(bool)
     roi = skimage.morphology.binary_erosion(roi, footprint=skimage.morphology.ball(1))
-    # temporal_std = (
-    #     vols[:, roi] / np.median(vols[:, roi], axis=1, keepdims=True)
-    # ).std(axis=0)
-    # roi[roi] = (
-    #     np.abs(vols[0, roi] / np.median(vols[0, roi]) - 1) < 0.25
-    # ) * (temporal_std < 0.1)
     return largest_island(roi)
 
 
