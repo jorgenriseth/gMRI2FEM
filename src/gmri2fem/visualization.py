@@ -372,3 +372,7 @@ def legacy_image_grid_builder(fig_width, im_width, im_height, grid_config, frame
 
 def flatten(list_of_lists):
     return sum(list_of_lists, start=[])
+
+
+def create_slices(coords: list[int]):
+    return [(slice(None, None, None),) * idx + (coords[idx],) for idx in range(3)]

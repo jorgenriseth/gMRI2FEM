@@ -1,6 +1,4 @@
 import contextlib
-import dataclasses
-import itertools
 import json
 import os
 import re
@@ -11,9 +9,7 @@ import click
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
-import scipy
-import skimage
-import tqdm
+from matplotlib import colors as mcolors
 from simple_mri import SimpleMRI, load_mri, save_mri
 
 
@@ -58,15 +54,17 @@ def canonical_lut(
     return pd.DataFrame.from_records(sorted(records, key=lambda x: x["label"]))
 
 
-def listed_colormap(lut_table: pd.DataFrame) -> mpl.colors.ListedColormap:
+def listed_colormap(
+    lut_table: pd.DataFrame,
+) -> dict[str, mcolors.ListedColormap | mcolors.BoundaryNorm]:
     # Norm need sorted labels
     sorted_table = lut_table.sort_values("label").reset_index(drop=True)
-    colors = sorted_table[["R", "G", "B", "A"]].values
+    colors = np.array(sorted_table[["R", "G", "B", "A"]].values)
     labels = sorted_table["label"].values
-    norm = mpl.colors.BoundaryNorm(
+    norm = mcolors.BoundaryNorm(
         boundaries=list(labels) + [labels[-1] + 1], ncolors=len(colors), clip=False
     )
-    return {"cmap": mpl.colors.ListedColormap(colors), "norm": norm}
+    return {"cmap": mcolors.ListedColormap(colors), "norm": norm}
 
 
 def write_lut(filename: Path | str, table: pd.DataFrame):
@@ -146,11 +144,6 @@ def collapse(seg: np.ndarray, relabeling: dict[str, list[int]]) -> np.ndarray:
         segment_mask = np.isin(seg, old_labels)
         newseg[segment_mask] = new_label
     return newseg
-
-
-def inclusions(seg: np.ndarray, old: int, new: int) -> np.ndarray:
-    np.where(old)
-    return seg
 
 
 @click.command(name="collapse")
