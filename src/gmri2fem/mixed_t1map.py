@@ -16,8 +16,13 @@ from gmri2fem.masking import create_csf_mask
 def T1_lookup_table(
     TRse: float, TI: float, TE: float, T1_low: float, T1_hi: float
 ) -> tuple[np.ndarray, np.ndarray]:
+    ###
+    # FIXME: HARDCODED TR according to scanner display.
+    # Not sure how to exactly replicate this value
+    # from DICOM-files, but we could extract them approximately.
+    TR = 7089
+    ###
     T1_grid = np.arange(T1_low, T1_hi + 1)
-    TR = TRse - 2 * TE
     Sse = 1 - np.exp(-TR / T1_grid)
     Sir = 1 - (1 + Sse) * np.exp(-TI / T1_grid)
     fractionCurve = Sir / Sse
