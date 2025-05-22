@@ -101,6 +101,14 @@ def read_lut(filename: Path | str | None) -> pd.DataFrame:
     return pd.DataFrame.from_records(records)
 
 
+def find_label_description(label, lut_table):
+    return lut_table[lut_table["label"] == label]["description"].iloc[0]
+
+
+def find_description_label(description, lut_table):
+    return int(lut_table[lut_table["description"] == description]["label"].iloc[0])
+
+
 def write_relabeling(
     filename: Path | str, relabeling: dict[str, list[int]], indent: int = 2
 ):
@@ -150,12 +158,6 @@ def collapse(seg: np.ndarray, relabeling: dict[str, list[int]]) -> np.ndarray:
     return newseg
 
 
-def find_label_description(label, lut_table):
-    return lut_table[lut_table["label"] == label]["description"].iloc[0]
-
-
-def find_description_label(description, lut_table):
-    return int(lut_table[lut_table["description"] == description]["label"].iloc[0])
 
 
 @click.command(name="collapse")
