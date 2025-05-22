@@ -118,7 +118,7 @@ def plot_orient(
 
 
 def session_range(*args):
-    return [f"ses-{idx+1:02d}" for idx in range(*args)]
+    return [f"ses-{idx + 1:02d}" for idx in range(*args)]
 
 
 def axial_dilation_footprint(ndim, axis):
@@ -153,7 +153,7 @@ def connectivity_matrix(arr):
 def float_string_formatter(x: float, digits):
     if float(x) == float("inf"):
         return "inf"
-    return f"{x*10**(-digits):{f'.{digits}e'}}".replace(".", "")
+    return f"{x * 10 ** (-digits):{f'.{digits}e'}}".replace(".", "")
 
 
 def to_scientific(num, decimals):
