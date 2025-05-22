@@ -1,3 +1,4 @@
+from typing import Optional
 from pathlib import Path
 
 import click
@@ -7,10 +8,10 @@ import pantarei as pr
 
 def collect_mesh_data(
     domain_data: Path,
-    dti_data: Path,
     concentration_data: Path,
     parcellation_data: Path,
     output: Path,
+    dti_data: Optional[Path] = None,
 ):
     hdf = df.HDF5File(df.MPI.comm_world, str(output), "w")
 
@@ -29,11 +30,12 @@ def collect_mesh_data(
             pr.write_checkpoint(hdf, func, funcname, ti)
     pr.close(concentration_hdf)
 
-    dti_hdf = df.HDF5File(df.MPI.comm_world, str(dti_data), "r")
-    for funcname in ["DTI", "FA", "MD"]:
-        func = pr.read_function(dti_hdf, funcname, domain)
-        pr.write_function(hdf, func, funcname)
-    pr.close(dti_hdf)
+    if dti_data is not None:
+        dti_hdf = df.HDF5File(df.MPI.comm_world, str(dti_data), "r")
+        for funcname in ["DTI", "FA", "MD"]:
+            func = pr.read_function(dti_hdf, funcname, domain)
+            pr.write_function(hdf, func, funcname)
+        pr.close(dti_hdf)
 
     parcellation_hdf = df.HDF5File(df.MPI.comm_world, str(parcellation_data), "r")
     subdomains = df.MeshFunction("size_t", domain, domain.topology().dim())
@@ -43,9 +45,9 @@ def collect_mesh_data(
 
 @click.command()
 @click.option("--domain", "domain_data", type=Path, required=True)
-@click.option("--dti_data", type=Path, required=True)
 @click.option("--concentration_data", type=Path, required=True)
 @click.option("--parcellation_data", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
+@click.option("--dti_data", type=Path)
 def collect(*args, **kwargs):
     collect_mesh_data(*args, **kwargs)
