@@ -6,7 +6,7 @@ import tqdm
 from simple_mri import assert_same_space, load_mri
 
 from gmri2fem.segmentation_groups import default_segmentation_groups
-from gmri2fem.segment_tools import read_lut
+from gmri2fem.segment_tools import read_lut, find_label_description
 
 REGION_STAT_FUNCTIONS = {
     "mean": np.mean,
@@ -101,6 +101,33 @@ def compute_region_statistics(
         }
         records.append(group_regions)
     return pd.DataFrame.from_records(records)
+
+def voxel_count_to_ml_scale(affine: np.ndarray):
+    return 1e-3 * np.linalg.det(affine[:3, :3])
+
+def segstats(seg: np.ndarray, lut: pd.DataFrame, volscale: float):
+    labels = np.unique(seg[seg > 0])
+    seg_table = pd.DataFrame.from_records([
+        {
+            "label": label,
+            "description": find_label_description(label, lut),
+            "voxelcount": (seg == label).sum(),
+            "volume (mL)": volscale * (seg == label).sum() 
+        } for label in labels
+    ])
+    total = {
+        "label": set(labels),
+        "description": "all-regions",
+        "voxelcount": (seg != 0).sum(),
+        "volume (mL)": volscale * (seg != 0).sum() 
+    }
+    seg_table = pd.concat([
+            seg_table,
+            pd.DataFrame.from_records([total]),
+        ],
+        ignore_index=True,
+    )
+    return seg_table
 
 
 if __name__ == "__main__":

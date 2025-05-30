@@ -22,7 +22,7 @@ def T1_lookup_table(
     # from DICOM-files, but we could extract them approximately.
     TR = 7089
     ###
-    T1_grid = np.arange(T1_low, T1_hi + 1)
+    T1_grid = np.arange(int(T1_low), int(T1_hi + 1))
     Sse = 1 - np.exp(-TR / T1_grid)
     Sir = 1 - (1 + Sse) * np.exp(-TI / T1_grid)
     fractionCurve = Sir / Sse
@@ -84,8 +84,8 @@ def process_mixed_t1map(
     ir: Path,
     meta: Path,
     output: Path,
-    t1_low: float = 1.0,
-    t1_high: float = float("Inf"),
+    t1_low: float,
+    t1_high: float,
     postprocessed: Optional[Path] = None,
 ):
     T1map_nii = estimate_T1_mixed(se, ir, meta, T1_low=t1_low, T1_hi=t1_high)
@@ -111,7 +111,7 @@ def mixed_t1_postprocessing(se: Path, t1: Path, output: Path):
 @click.option("--meta", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
 @click.option("--t1_low", type=float, default=1.0)
-@click.option("--t1_high", type=float, default=float("Inf"))
+@click.option("--t1_high", type=float, default=20000.0)
 @click.option("--postprocessed", type=Path, required=True)
 def mixed_t1map(**kwargs):
     process_mixed_t1map(**kwargs)
