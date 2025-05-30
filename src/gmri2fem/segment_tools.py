@@ -60,21 +60,24 @@ def listed_colormap(
 ) -> dict[str, mcolors.ListedColormap | mcolors.BoundaryNorm]:
     # Norm need sorted labels
     sorted_table = lut_table.sort_values("label").reset_index(drop=True)
-    colors = np.asarray(sorted_table[["R", "G", "B", "A"]].values)
-    labels = np.asarray(sorted_table["label"].values)
+    labels = sorted_table["label"].values
+    colors = sorted_table[["R", "G", "B", "A"]].values
+    cmap = mcolors.ListedColormap(colors)
+
+
     sorted_unique_labels = np.sort(np.unique(labels))
     bounds = np.concatenate(
         ([sorted_unique_labels[0] - 0.5], sorted_unique_labels + 0.5)
     )
-    cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
     return {"cmap": cmap, "norm": norm}
 
 
 def write_lut(filename: Path | str, table: pd.DataFrame):
     newtable = table.copy()
-    for col in "RGBA":
+    for col in "RGB":
         newtable[col] = (newtable[col] * 255).astype(int)
+    newtable["A"] = 255 - (newtable["A"] * 255).astype(int)
     newtable.to_csv(filename, sep="\t", index=False, header=False)
 
 
