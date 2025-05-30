@@ -20,7 +20,13 @@ def topup(dti, topup_b0, outputdir: Path, tmppath: Optional[Path] = None):
     str_base = common_prefix(Path(dti).name, Path(topup_b0).name)
     merged_b0 = tmppath / f"{str_base}_topup_b0_stack.nii.gz"
     cmd = f"fslmerge -t {merged_b0} {dti_b0} {topup_b0}"
-    subprocess.run(cmd, shell=True, check=True)
+    try: 
+        subprocess.run(cmd, shell=True, check=True)
+    except subprocess.CalledProcessError:
+        # Potential error due to slow I/O, wait a bit and retry.
+        import time
+        time.sleep(10)
+        subprocess.run(cmd, shell=True, check=True)
 
     dti_json = with_suffix(dti, ".json")
     acq_params = outputdir / f"{str_base}_topup_acq_params.txt"
