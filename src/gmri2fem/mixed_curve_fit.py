@@ -35,7 +35,7 @@ def fit_voxel(
         return np.nan * np.zeros_like(p0)
     try:
         popt, _ = curve_fit_wrapper(f, time_s, m, p0, bounds=bounds)
-    except (OptimizeWarning, FloatingPointError) as e:
+    except (OptimizeWarning, FloatingPointError):
         return np.nan * np.zeros_like(p0)
     except RuntimeError as e:
         if "maximum number of function evaluations" in str(e):
@@ -102,7 +102,7 @@ def curve_fit_csf_concentrations(
         fitted_coefficients[:, 2],
     )
 
-    I, J, K = valid_voxels.T
+    I, J, K = valid_voxels.T  # noqa: E741
     coefficient_map = np.nan * np.zeros((3, *csf_mask.shape))
     coefficient_map[0, I, J, K] = a
     coefficient_map[1, I, J, K] = b

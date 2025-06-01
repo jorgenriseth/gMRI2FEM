@@ -2,13 +2,11 @@ import os
 from pathlib import Path
 
 import numpy as np
-import matplotlib.pyplot as plt
 import simple_mri as sm
 import pandas as pd
 
 from gmri2fem.masking import create_csf_mask
 from gmri2fem import segment_tools as segtools
-from gmri2fem.visualization import slice_volume
 from gmri2fem.segmentation_refinement import (
     extrapolate_segmentation_to_mask,
     resample_segmentation,
@@ -124,7 +122,7 @@ def create_extended_segmentation_cli(
     extended_segmentation_mri = extended_segmentation_d["segmentation"]
     extended_lut = extended_segmentation_d["LUT"]
 
-    sm.save_mri(extended_segmentation_mri, output, dtype=np.single)
+    sm.save_mri(extended_segmentation_mri, Path(output), dtype=np.single)
     segtools.write_lut(
         str(output).replace(".nii.gz", "_LUT.txt"),
         extended_lut,

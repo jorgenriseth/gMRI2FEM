@@ -10,7 +10,6 @@ import matplotlib as mpl
 import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
-from matplotlib import colors as mcolors
 from simple_mri import SimpleMRI, load_mri, save_mri
 
 
@@ -63,7 +62,6 @@ def listed_colormap(
     labels = sorted_table["label"].values
     colors = sorted_table[["R", "G", "B", "A"]].values
     cmap = mcolors.ListedColormap(colors)
-
 
     sorted_unique_labels = np.sort(np.unique(labels))
     bounds = np.concatenate(
@@ -159,8 +157,6 @@ def collapse(seg: np.ndarray, relabeling: dict[str, list[int]]) -> np.ndarray:
         segment_mask = np.isin(seg, old_labels)
         newseg[segment_mask] = new_label
     return newseg
-
-
 
 
 @click.command(name="collapse")
