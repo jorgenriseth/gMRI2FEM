@@ -12,37 +12,13 @@ import tqdm
 from pantarei import FenicsStorage, fenicsstorage2xdmf
 from simple_mri import load_mri
 
-from gmri2fem.utils import nan_filter_gaussian, nearest_neighbour
+from gmri2fem.utils import nan_filter_gaussian, nearest_neighbour, find_timestamps
 from i2m.mri2fenics import (
     find_boundary_dofs,
     find_dof_nearest_neighbours,
     locate_dof_voxels,
     mri2fem_interpolate_quadrature,
 )
-
-
-def extract_sequence_timestamps(
-    timetable_path: Path, subject: str, sequence_label: str
-):
-    try:
-        timetable = pd.read_csv(timetable_path, sep="\t")
-    except pd.errors.EmptyDataError:
-        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
-    subject_sequence_entries = (timetable["subject"] == subject) & (
-        timetable["sequence_label"] == sequence_label
-    )
-    try:
-        acq_times = timetable[subject_sequence_entries][
-            "acquisition_relative_injection"
-        ]
-    except ValueError as e:
-        print(timetable)
-        print(subject, sequence_label)
-        print(subject_sequence_entries)
-        raise e
-    times = np.array(acq_times)
-    assert len(times) > 0, f"Couldn't find time for {subject}: {sequence_label}"
-    return times
 
 
 def smooth_dilation(D: np.ndarray, sigma: float, truncate: float = 4) -> np.ndarray:
@@ -84,9 +60,7 @@ def map_concentration(
         csf_mask_mri.data, skimage.morphology.ball(1)
     )
 
-    timestamps = np.maximum(
-        0, extract_sequence_timestamps(timetable, subject, "looklocker")
-    )
+    timestamps = np.maximum(0, find_timestamps(timetable, subject, "looklocker"))
     domain = pr.hdf2fenics(meshpath, pack=True)
     V = df.FunctionSpace(domain, femfamily, femdegree)
 

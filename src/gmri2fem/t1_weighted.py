@@ -17,22 +17,28 @@ def T1w_sigdiff(input: Path, reference: Path, mask: Path, output: Path):
     ref = ref_mri.data
 
     mask_mri = sm.load_mri(mask, dtype=bool)
-    mask = mask_mri.data * (ref > 0)
-
-    signal_diff = np.nan * np.zeros_like(vol)
-    signal_diff[mask] = vol[mask] / ref[mask] - 1
+    signal_diff = compute_relative_signal_difference(vol, ref, mask_mri.data)
     signal_diff_mri = sm.SimpleMRI(signal_diff, affine=vol_mri.affine)
     sm.save_mri(signal_diff_mri, output, np.single)
 
 
 def normalize_image(input: Path, refroi: Path, output: Path) -> Path:
     image = sm.load_mri(input, dtype=np.single)
-    refroi = sm.load_mri(refroi, dtype=bool)
-    sm.assert_same_space(image, refroi)
-    normalized_data = image.data / np.median(image.data[refroi.data])
+    refroi_mri = sm.load_mri(refroi, dtype=bool)
+    sm.assert_same_space(image, refroi_mri)
+    normalized_data = image.data / np.median(image.data[refroi_mri.data])
     normalized_mri = sm.SimpleMRI(normalized_data, image.affine)
     sm.save_mri(normalized_mri, output, dtype=np.single)
     return output
+
+
+def compute_relative_signal_difference(
+    volume: np.ndarray, ref: np.ndarray, mask: np.ndarray
+):
+    nonzero_mask = mask * (ref > 0)
+    signal_diff = np.nan * np.zeros_like(volume)
+    signal_diff[nonzero_mask] = volume[nonzero_mask] / ref[nonzero_mask] - 1.0
+    return signal_diff
 
 
 @click.command()

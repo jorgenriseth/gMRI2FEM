@@ -1,6 +1,4 @@
 import contextlib
-import dataclasses
-import itertools
 import json
 import os
 import re
@@ -9,11 +7,9 @@ from typing import Optional
 
 import click
 import matplotlib as mpl
+import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
-import scipy
-import skimage
-import tqdm
 from simple_mri import SimpleMRI, load_mri, save_mri
 
 
@@ -58,21 +54,28 @@ def canonical_lut(
     return pd.DataFrame.from_records(sorted(records, key=lambda x: x["label"]))
 
 
-def listed_colormap(lut_table: pd.DataFrame) -> mpl.colors.ListedColormap:
+def listed_colormap(
+    lut_table: pd.DataFrame,
+) -> dict[str, mcolors.ListedColormap | mcolors.BoundaryNorm]:
     # Norm need sorted labels
     sorted_table = lut_table.sort_values("label").reset_index(drop=True)
-    colors = sorted_table[["R", "G", "B", "A"]].values
     labels = sorted_table["label"].values
-    norm = mpl.colors.BoundaryNorm(
-        boundaries=list(labels) + [labels[-1] + 1], ncolors=len(colors), clip=False
+    colors = sorted_table[["R", "G", "B", "A"]].values
+    cmap = mcolors.ListedColormap(colors)
+
+    sorted_unique_labels = np.sort(np.unique(labels))
+    bounds = np.concatenate(
+        ([sorted_unique_labels[0] - 0.5], sorted_unique_labels + 0.5)
     )
-    return {"cmap": mpl.colors.ListedColormap(colors), "norm": norm}
+    norm = mcolors.BoundaryNorm(bounds, cmap.N)
+    return {"cmap": cmap, "norm": norm}
 
 
 def write_lut(filename: Path | str, table: pd.DataFrame):
     newtable = table.copy()
-    for col in "RGBA":
+    for col in "RGB":
         newtable[col] = (newtable[col] * 255).astype(int)
+    newtable["A"] = 255 - (newtable["A"] * 255).astype(int)
     newtable.to_csv(filename, sep="\t", index=False, header=False)
 
 
@@ -97,6 +100,14 @@ def read_lut(filename: Path | str | None) -> pd.DataFrame:
     with open(filename, "r") as f:
         records = [lut_record(m) for m in map(lut_regex.match, f) if m is not None]
     return pd.DataFrame.from_records(records)
+
+
+def find_label_description(label, lut_table):
+    return lut_table[lut_table["label"] == label]["description"].iloc[0]
+
+
+def find_description_label(description, lut_table):
+    return int(lut_table[lut_table["description"] == description]["label"].iloc[0])
 
 
 def write_relabeling(
@@ -146,11 +157,6 @@ def collapse(seg: np.ndarray, relabeling: dict[str, list[int]]) -> np.ndarray:
         segment_mask = np.isin(seg, old_labels)
         newseg[segment_mask] = new_label
     return newseg
-
-
-def inclusions(seg: np.ndarray, old: int, new: int) -> np.ndarray:
-    np.where(old)
-    return seg
 
 
 @click.command(name="collapse")

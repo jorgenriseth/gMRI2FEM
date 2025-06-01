@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Optional
 
 import click
-import tqdm
 
 from dti.utils import mri_number_of_frames
 
@@ -58,7 +57,15 @@ def reslice_4d(
             shell=True,
         ).check_returncode()
     components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
-    subprocess.run(
-        f"fslmerge -t {outpath} {' '.join(components)}", shell=True
-    ).check_returncode()
+    try:
+        subprocess.run(
+            f"fslmerge -t {outpath} {' '.join(components)}", shell=True
+        ).check_returncode()
+    except subprocess.CalledProcessError:
+        # Potential error due to slow I/O, wait a bit and retry.
+        import time
+        time.sleep(10)
+        subprocess.run(
+            f"fslmerge -t {outpath} {' '.join(components)}", shell=True
+        ).check_returncode()
     return outpath

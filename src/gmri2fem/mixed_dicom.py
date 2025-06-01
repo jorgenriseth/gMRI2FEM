@@ -23,8 +23,9 @@ VOLUME_LABELS = [
 @click.command("dcm2nii-mixed")
 @click.argument("dcmpath", type=Path, required=True)
 @click.argument("outpath", type=Path, required=True)
-@click.option("--subvolumes", type=str, multiple=True, default=None)
+@click.option("--subvolume", "subvolumes", type=str, multiple=True, default=None)
 def dcm2nii_mixed_cli(*args, **kwargs):
+    print(type(kwargs["subvolumes"]))
     dcm2nii_mixed(*args, **kwargs)
 
 
@@ -34,9 +35,9 @@ def dcm2nii_mixed(
     subvolumes: Optional[list[str]] = None,
 ):
     subvolumes = subvolumes or VOLUME_LABELS
-    assert all(
-        [volname in VOLUME_LABELS for volname in subvolumes]
-    ), f"Invalid subvolume name in {subvolumes}, not in {VOLUME_LABELS}"
+    assert all([volname in VOLUME_LABELS for volname in subvolumes]), (
+        f"Invalid subvolume name in {subvolumes}, not in {VOLUME_LABELS}"
+    )
     outdir, form = outpath.parent, outpath.stem
     outdir.mkdir(exist_ok=True, parents=True)
 
@@ -73,9 +74,9 @@ def extract_mixed_dicom(dcmpath: Path, subvolumes: list[str]):
     frames_total = int(dcm.NumberOfFrames)
     frames_per_volume = dcm[0x2001, 0x1018].value  # [Number of Slices MR]
     num_volumes = frames_total // frames_per_volume
-    assert (
-        num_volumes * frames_per_volume == frames_total
-    ), "Subvolume dimensions do not match"
+    assert num_volumes * frames_per_volume == frames_total, (
+        "Subvolume dimensions do not match"
+    )
 
     D = dcm.pixel_array.astype(np.single)
     frame_fg_sequence = dcm.PerFrameFunctionalGroupsSequence
@@ -90,7 +91,7 @@ def extract_mixed_dicom(dcmpath: Path, subvolumes: list[str]):
         frame_fg = frame_fg_sequence[subvol_idx_start]
         logger.info(
             (
-                f"Converting volume {vol_idx+1}/{len(VOLUME_LABELS)}: {volname} between indices"
+                f"Converting volume {vol_idx + 1}/{len(VOLUME_LABELS)}: {volname} between indices"
                 + f"{subvol_idx_start, subvol_idx_end} / {frames_total}."
             )
         )

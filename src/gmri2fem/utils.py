@@ -1,10 +1,12 @@
 import re
+from pathlib import Path
 from typing import Literal, Optional
 
 import numpy as np
 import scipy as sp
 import skimage
 import tqdm
+import pandas as pd
 
 
 def apply_affine(T: np.ndarray, X: np.ndarray) -> np.ndarray:
@@ -92,9 +94,9 @@ def nearest_neighbour(
 ) -> np.ndarray:
     i, j, k = inds.T
     if valid_indices is None:
-        I, J, K = np.array(np.where(np.isfinite(D)))
+        I, J, K = np.array(np.where(np.isfinite(D)))  # noqa: E741
     else:
-        I, J, K = valid_indices
+        I, J, K = valid_indices  # noqa: E741
     interp = sp.interpolate.NearestNDInterpolator(np.array((I, J, K)).T, D[I, J, K])
     D_out = D.copy()
     D_out[i, j, k] = interp(i, j, k)
@@ -118,7 +120,7 @@ def plot_orient(
 
 
 def session_range(*args):
-    return [f"ses-{idx+1:02d}" for idx in range(*args)]
+    return [f"ses-{idx + 1:02d}" for idx in range(*args)]
 
 
 def axial_dilation_footprint(ndim, axis):
@@ -153,7 +155,7 @@ def connectivity_matrix(arr):
 def float_string_formatter(x: float, digits):
     if float(x) == float("inf"):
         return "inf"
-    return f"{x*10**(-digits):{f'.{digits}e'}}".replace(".", "")
+    return f"{x * 10 ** (-digits):{f'.{digits}e'}}".replace(".", "")
 
 
 def to_scientific(num, decimals):
@@ -163,3 +165,46 @@ def to_scientific(num, decimals):
     m = re.search(r"(\d\.{0,1}\d*)e([\+|\-]\d{2})", x)
 
     return f"{m.group(1)}\\times10^{{{int(m.group(2))}}}"
+
+
+def find_timestamps(timetable_path: Path, subject: str, sequence_name: str):
+    try:
+        timetable = pd.read_csv(timetable_path, sep="\t")
+    except pd.errors.EmptyDataError:
+        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
+    subject_sequence_entries = (timetable["subject"] == subject) & (
+        timetable["sequence_name"].str.lower() == sequence_name
+    )
+    try:
+        acq_times = timetable.loc[subject_sequence_entries][
+            "acquisition_relative_injection"
+        ]
+    except ValueError as e:
+        print(timetable)
+        print(subject, sequence_name)
+        print(subject_sequence_entries)
+        raise e
+    times = np.array(acq_times)
+    assert len(times) > 0, f"Couldn't find time for {subject}: {sequence_name}"
+    return times
+
+
+def find_timestamp(
+    timetable_path: Path, timestamp_sequence: str, subject: str, session: str
+) -> float:
+    """TODO: Merge with above function"""
+    try:
+        timetable = pd.read_csv(timetable_path, sep="\t")
+    except pd.errors.EmptyDataError:
+        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
+    try:
+        timestamp = timetable.loc[
+            (timetable["sequence_name"] == timestamp_sequence)
+            & (timetable["subject"] == subject)
+            & (timetable["session"] == session)
+        ]["acquisition_relative_injection"]
+    except ValueError as e:
+        print(timetable)
+        print(timestamp_sequence, subject, session)
+        raise e
+    return timestamp.item()

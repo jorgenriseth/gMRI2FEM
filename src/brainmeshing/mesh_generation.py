@@ -1,4 +1,5 @@
 import functools
+import time as pytime
 from pathlib import Path
 
 import click
@@ -129,6 +130,7 @@ def generate_mesh(
         domain.remove_subdomain(tags["ventricles"])
 
     domain.save(str(output.with_suffix(".mesh")))
+    pytime.sleep(10)  # Wait another 10 seconds in case of IO delay.
     xdmfdir = output.parent / "mesh_xdmfs"
     xdmfdir.mkdir(exist_ok=True, parents=True)
     mesh2xdmf(str(output.with_suffix(".mesh")), xdmfdir, dim=3)
@@ -226,3 +228,7 @@ def extract_subcortical_gm(
     subcortical_svm = pyvista2svmtk(subcortical_gm)
     subcortical_gm = repair_disconnected_triangulation(svmtk2pyvista(subcortical_svm))
     return subcortical_gm
+
+
+if __name__ == "__main__":
+    meshgen()

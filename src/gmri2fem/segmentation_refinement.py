@@ -107,6 +107,22 @@ def segmentation_smoothing(
     return {"labels": new_labels, "scores": high_scores}
 
 
+def extrapolate_segmentation_to_mask(seg_mri: sm.SimpleMRI, mask_mri: sm.SimpleMRI):
+    seg = seg_mri.data
+    I, J, K = np.where(seg != 0)
+    IJK = np.array([I, J, K]).T
+    RAS = sm.apply_affine(seg_mri.affine, IJK)
+    interp = scipy.interpolate.NearestNDInterpolator(RAS, seg[I, J, K])
+
+    mask = mask_mri.data
+    i, j, k = np.where(mask)
+    ijk = np.array([i, j, k]).T
+    ras = sm.apply_affine(mask_mri.affine, ijk)
+    csf_seg = np.zeros(mask.shape, dtype=np.int16)
+    csf_seg[i, j, k] = interp(*ras.T)
+    return sm.SimpleMRI(csf_seg, mask_mri.affine)
+
+
 @click.command()
 @click.option("--fs_seg", type=Path, required=True)
 @click.option("--reference", type=Path, required=True)
