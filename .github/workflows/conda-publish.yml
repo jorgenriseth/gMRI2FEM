@@ -1,10 +1,8 @@
 name: Conda publish
 
 on:
-  workflow_run:
-    workflows: ["PyPI publish"]
-    types: 
-      - completed
+  release:
+    types: [published]
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
@@ -24,19 +22,14 @@ jobs:
       - name: Install Dependencies
         shell: bash -l {0}
         run: |
-          conda install -y -c conda-forge -c defaults grayskull conda-build anaconda-client
-          conda config --add channels conda-forge
+          conda install -y -c conda-forge -c defaults conda-build anaconda-client
           conda config --add channels conda-forge/label/fenics-dev
+          conda config --add channels conda-forge
           conda config --add channels jorgenriseth
           conda config --set anaconda_upload yes
-      - name: Generate conda recipe with GraySkull
-        shell: bash -l {0}
-        run: |
-          grayskull pypi gmri2fem
-
       - name: Build and upload conda package to Anaconda Cloud
         shell: bash -l {0}
         env:
           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
-          conda build gmri2fem --skip-existing
+          conda build conda-recipe/
