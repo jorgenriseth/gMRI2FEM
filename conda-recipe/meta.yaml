@@ -1,0 +1,47 @@
+{% set pyproject = load_file_data(RECIPE_DIR ~ '/../pyproject.toml') %}
+{% set project = pyproject['project'] %}
+{% set dependencies = project.get('dependencies', []) %}
+{% set pixidependencies = pyproject.get('tool', {}).get('pixi', {}).get('dependencies', {}) %}
+
+package:
+  name: {{ project['name'] | lower }}
+  version: "{{ project['version'] }}"
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
+
+requirements:
+  host:
+    - python {{ project.get('requires-python', '') }}
+    - setuptools
+    - pip
+  run:
+    - python
+    {% for dep in dependencies %}
+    - {{ dep | replace('>=', ' >=') | replace('<=', ' <=') | replace('==', ' ==') | replace('!=', ' !=') | replace('~=', ' ~=') | replace('>', ' >') | replace('<', ' <') }}
+    {% endfor %}
+    {% for name, version_spec in pixidependencies.items() %}
+    - {{ name }} {{ version_spec }}
+    {% endfor %}
+  test:
+    imports:
+      - analysis
+      - brainmeshing
+      - dti
+      - gmri2fem
+      - i2m
+    commands:
+      - pip check
+      - gmri2fem --help
+    requires:
+      - pip
+
+about:
+  summary: "{{ project.get('description', 'No summary provided.') }}"
+  home: "{{ project.get('urls', {}).get('Homepage', 'NO_HOMEPAGE_SET') }}"
+  license: "{{ project['license'] }}"
+  license_file: ../LICENSE # Path to your license file in the project root
