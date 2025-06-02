@@ -1,5 +1,0 @@
-subjects: ["sub-01"]
-resolution: [32]
-sim_threads: 8
-recon_threads: 1
-num_sessions: 5

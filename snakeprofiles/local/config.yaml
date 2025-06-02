@@ -1,3 +1,0 @@
-use-singularity: True
-singularity-args: " -c -e -B \"$(pwd)\" -B singularity/license.txt:/license.txt -B \"$(readlink -f data)\" -B \"$(readlink -f data/mri_dataset/sourcedata)\""
-jobs: 10
