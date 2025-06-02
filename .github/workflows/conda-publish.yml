@@ -6,9 +6,8 @@ on:
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
-  build-and-upload:
+  build-and-publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout Repository
