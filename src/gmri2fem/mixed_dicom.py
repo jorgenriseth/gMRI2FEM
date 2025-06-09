@@ -25,7 +25,6 @@ VOLUME_LABELS = [
 @click.argument("outpath", type=Path, required=True)
 @click.option("--subvolume", "subvolumes", type=str, multiple=True, default=None)
 def dcm2nii_mixed_cli(*args, **kwargs):
-    print(type(kwargs["subvolumes"]))
     dcm2nii_mixed(*args, **kwargs)
 
 
@@ -49,12 +48,17 @@ def dcm2nii_mixed(
         nii = vol["nifti"]
         descrip = vol["descrip"]
         nibabel.nifti1.save(nii, output)
-        if volname == "SE-modulus":
-            meta["TR_SE"] = descrip["TR"]
-            meta["TE"] = descrip["TE"]
-        elif volname == "IR-corrected-real":
-            meta["TR_IR"] = descrip["TR"]
-            meta["TI"] = descrip["TI"]
+        try:
+            if volname == "SE-modulus":
+                meta["TR_SE"] = descrip["TR"]
+                meta["TE"] = descrip["TE"]
+                meta["ETL"] = descrip["ETL"]
+            elif volname == "IR-corrected-real":
+                meta["TR_IR"] = descrip["TR"]
+                meta["TI"] = descrip["TI"]
+        except KeyError as e:
+            print(volname, descrip)
+            raise e
 
     with open(outpath.parent / f"{form}_meta.json", "w") as f:
         json.dump(meta, f)
@@ -110,6 +114,10 @@ def extract_mixed_dicom(dcmpath: Path, subvolumes: list[str]):
         }
         if hasattr(frame_fg.MRModifierSequence[0], "InversionTimes"):
             description["TI"] = frame_fg.MRModifierSequence[0].InversionTimes[0]
+        if hasattr(frame_fg.MRTimingAndRelatedParametersSequence[0], "EchoTrainLength"):
+            description["ETL"] = frame_fg.MRTimingAndRelatedParametersSequence[
+                0
+            ].EchoTrainLength
         vols_out.append({"nifti": nii_oriented, "descrip": description})
     return vols_out
 

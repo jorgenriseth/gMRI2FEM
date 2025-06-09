@@ -14,19 +14,20 @@ from gmri2fem.masking import create_csf_mask
 
 
 def T1_lookup_table(
-    TRse: float, TI: float, TE: float, T1_low: float, T1_hi: float
+    TRse: float, TI: float, TE: float, ETL: int, T1_low: float, T1_hi: float
 ) -> tuple[np.ndarray, np.ndarray]:
-    ###
-    # FIXME: HARDCODED TR according to scanner display.
-    # Not sure how to exactly replicate this value
-    # from DICOM-files, but we could extract them approximately.
-    TR = 7089
-    ###
+    TRfree = estimate_se_free_relaxation_time(TRse, TE, ETL)
     T1_grid = np.arange(int(T1_low), int(T1_hi + 1))
-    Sse = 1 - np.exp(-TR / T1_grid)
+    Sse = 1 - np.exp(-TRfree / T1_grid)
     Sir = 1 - (1 + Sse) * np.exp(-TI / T1_grid)
     fractionCurve = Sir / Sse
     return fractionCurve, T1_grid
+
+
+def estimate_se_free_relaxation_time(TRse, TE, ETL):
+    """Compute free relaxation time following spin echo image from effective echo
+    time TE and echo train length ETL, corrected for 20 dummy echoes."""
+    return TRse - TE * (1 + 0.5 * (ETL - 1) / (0.5 * (ETL + 1) + 20))
 
 
 def estimate_T1_mixed(
@@ -45,8 +46,8 @@ def estimate_T1_mixed(
     F_data = np.nan * np.zeros_like(IR.data)
     F_data[nonzero_mask] = IR.data[nonzero_mask] / SE.data[nonzero_mask]
 
-    TR_se, TI, TE = meta["TR_SE"], meta["TI"], meta["TE"]
-    F, T1_grid = T1_lookup_table(TR_se, TI, TE, T1_low, T1_hi)
+    TR_se, TI, TE, ETL = meta["TR_SE"], meta["TI"], meta["TE"], meta["ETL"]
+    F, T1_grid = T1_lookup_table(TR_se, TI, TE, ETL, T1_low, T1_hi)
     interpolator = scipy.interpolate.interp1d(
         F, T1_grid, kind="nearest", bounds_error=False, fill_value=np.nan
     )
