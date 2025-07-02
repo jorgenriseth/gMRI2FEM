@@ -1,9 +1,33 @@
+CEREBRAL_WM_RANGES = [
+    *[2, 41],  # aseg left/right cerebral white labels
+    *list(range(3000, 3036)),  # wmparc-left-labels
+    *list(range(4000, 4036)),  # wmparc-right-labels
+    *[5000, 5001],
+    *[28, 60],  # VentralDC included in white matter sudbomain
+    *list(range(251, 256)),  #  Corpus callosum
+    *[31, 63],  # Choroid plexus.
+]
+CEREBRAL_CGM_RANGES = [
+    *[3, 42],  # aseg left/right cortcal gm
+    *list(range(1000, 1036)),  # aparc left labels
+    *list(range(2000, 2036)),  # aparc right labels
+]
+SUBCORTICAL_GM_RANGES = [
+    *(10, 49),  # Thalamus,
+    *(11, 50),  # Caudate,
+    *(12, 51),  # Putamen,
+    *(13, 52),  # pallidum
+    *(17, 53),  # hippocampus
+    *(18, 54),  # amygdala
+    *(26, 58),  # accumbens
+]
+
 SEGMENTATION_GROUPS = {
-    "wm-cerebral": [2, 41],
+    "wm-cerebral": CEREBRAL_WM_RANGES,
     "wm-cerebellar": [7, 46],
     "wm-hypointensities": [77, 78, 70],
     "wm-pathological": [77, 78, 79, 80, 100, 109],
-    "cortex-cerebral": [3, 42],
+    "cortex-cerebral": CEREBRAL_CGM_RANGES,
     "cortex-cerebellar": [8, 47],
     "csf": [4, 5, 14, 15, 24, 43, 44],
     "cerebellum": [7, 8, 46, 47],

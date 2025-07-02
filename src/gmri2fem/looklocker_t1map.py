@@ -52,6 +52,9 @@ def fit_voxel(time_s: np.ndarray, pbar, m: np.ndarray) -> np.ndarray:
 
 
 def estimate_t1map(t_data: np.ndarray, D: np.ndarray, affine: np.ndarray) -> SimpleMRI:
+    assert len(D.shape) >= 4, (
+        f"data should be 4-dimensional, got data with shape {D.shape}"
+    )
     mask = mri_facemask(D[..., 0])
     valid_voxels = (np.nanmax(D, axis=-1) > 0) * mask
 

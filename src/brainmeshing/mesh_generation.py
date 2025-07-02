@@ -50,7 +50,7 @@ def meshgen(**kwargs):
 @click.option("--fs_dir", type=Path, required=True)
 @click.option("--surface_dir", type=Path, required=True)
 def extract_ventricles(
-    fs_dir: sm.SimpleMRI,
+    fs_dir: Path,
     surface_dir: Path,
 ):
     Path(surface_dir).mkdir(exist_ok=True)
@@ -73,16 +73,6 @@ def process_cerebral_surfaces(
     logger.info(f"Processing surfaces from {fs_dir} -> {surface_dir}")
     Path(surface_dir).mkdir(exist_ok=True)
     seg_mri = sm.load_mri(Path(fs_dir) / "mri/aseg.mgz", dtype=np.int16)
-    # ventricles = extract_ventricle_surface(
-    #     seg_mri,
-    #     initial_smoothing=0,
-    #     min_radius=3,
-    #     surface_smoothing=2,
-    #     taubin_iter=100,
-    #     dilate=0,
-    # )
-    # pv.save_meshio(f"{surface_dir}/ventricles.stl", ventricles)
-
     subcortical_gm = extract_subcortical_gm(seg_mri)
     pv.save_meshio(f"{surface_dir}/subcortical_gm.stl", subcortical_gm)
 

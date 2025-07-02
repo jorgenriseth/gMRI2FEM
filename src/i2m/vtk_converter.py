@@ -33,6 +33,34 @@ def extract_sequence_timestamps(
     return np.maximum(0.0, times)
 
 
+def mesh_to_pyvista_grid(mesh: meshio.Mesh, dim: int):
+    geometry = mesh_to_geometry(mesh, dim)
+    cells = cell_matrix_to_vtk_cells(geometry["polytopes"]["tetra"])
+    celltypes = [pv.CellType.TETRA] * len(geometry["polytopes"]["tetra"])
+    points = geometry["points"]
+    return pv.UnstructuredGrid(cells, celltypes, points)
+
+
+def mesh_to_geometry(
+    mesh: meshio.Mesh, dim: int
+) -> dict[str, np.ndarray | dict[str, np.ndarray]]:
+    if dim == 2:
+        polytope_label = "triangle"
+        facet_label = "line"
+    elif dim == 3:
+        polytope_label = "tetra"
+        facet_label = "triangle"
+    else:
+        raise ValueError("dim should be in (2, 3), got {}.".format(dim))
+    if dim == 2:
+        points = pr.prune_z_0(mesh)
+    else:
+        points = mesh.points
+    polytopes = {polytope_label: mesh.cells_dict[polytope_label]}
+    facets = {facet_label: mesh.cells_dict[facet_label]}
+    return {"points": points, "polytopes": polytopes, "facets": facets}
+
+
 def cell_matrix_to_vtk_cells(cells: np.ndarray):
     num_points_stack = cells.shape[1] * np.ones((cells.shape[0], 1), dtype=cells.dtype)
     return np.concatenate((num_points_stack, cells), axis=1).ravel()
