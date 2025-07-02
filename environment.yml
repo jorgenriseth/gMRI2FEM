@@ -1,8 +1,9 @@
 name: gmri2fem
 channels:
-- conda-forge
-- bioconda
 - jorgenriseth
+- https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public
+- bioconda
+- conda-forge
 - nodefaults
 dependencies:
 - python >=3.9,<3.12
@@ -30,6 +31,9 @@ dependencies:
 - setuptools
 - loguru
 - meshio
+- fsl-eddy
+- fsl-topup
+- fsl-fdt
 - pip
 - pip:
   - wildmeshing
