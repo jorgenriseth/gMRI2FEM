@@ -1,17 +1,23 @@
 import subprocess
+import nibabel
+from nibabel.filebasedimages import SpatialImage
 from pathlib import Path
 
 
+def load_nibabel_spatial(input: str | Path) -> SpatialImage:
+    im = nibabel.load(input)
+    assert isinstance(im, SpatialImage), f"File {input} is not a nibabel SpatialImage."
+    return im
+
+
 def mri_number_of_frames(input: str | Path) -> int:
-    return int(
-        subprocess.check_output(
-            f"mri_info --nframes {input} | grep -v -E 'INFO|unknown time'", shell=True
-        )
-    )
-
-
-def with_suffix(p: Path, newsuffix: str) -> Path:
-    return p.parent / f"{p.name.split('.')[0]}{newsuffix}"
+    im = load_nibabel_spatial(input)
+    ndim = im.ndim
+    if ndim == 3:
+        return 1
+    elif ndim == 4:
+        return im.shape[3]
+    raise RuntimeError(f"Invalid dimension {ndim}, of mri {input}")
 
 
 def path_stem(p: Path) -> str:
