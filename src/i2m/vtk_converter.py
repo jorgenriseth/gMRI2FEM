@@ -4,33 +4,8 @@ import click
 import dolfin as df
 import meshio
 import numpy as np
-import pandas as pd
 import pantarei as pr
 import pyvista as pv
-
-
-def extract_sequence_timestamps(
-    timetable_path: Path, subject: str, sequence_label: str
-):
-    try:
-        timetable = pd.read_csv(timetable_path, sep="\t")
-    except pd.errors.EmptyDataError:
-        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
-    subject_sequence_entries = (timetable["subject"] == subject) & (
-        timetable["sequence_label"] == sequence_label
-    )
-    try:
-        acq_times = timetable[subject_sequence_entries][
-            "acquisition_relative_injection"
-        ]
-    except ValueError as e:
-        print(timetable)
-        print(subject, sequence_label)
-        print(subject_sequence_entries)
-        raise e
-    times = np.array(acq_times)
-    assert len(times) > 0, f"Couldn't find time for {subject}: {sequence_label}"
-    return np.maximum(0.0, times)
 
 
 def mesh_to_pyvista_grid(mesh: meshio.Mesh, dim: int):
@@ -53,7 +28,7 @@ def mesh_to_geometry(
     else:
         raise ValueError("dim should be in (2, 3), got {}.".format(dim))
     if dim == 2:
-        points = pr.prune_z_0(mesh)
+        points = mesh.points[:, :2]
     else:
         points = mesh.points
     polytopes = {polytope_label: mesh.cells_dict[polytope_label]}
