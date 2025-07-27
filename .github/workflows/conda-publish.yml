@@ -25,6 +25,7 @@ jobs:
           conda config --add channels conda-forge/label/fenics-dev
           conda config --add channels conda-forge
           conda config --add channels jorgenriseth
+          conda config --add channels https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public
           conda config --set anaconda_upload yes
       - name: Build and upload conda package to Anaconda Cloud
         shell: bash -l {0}

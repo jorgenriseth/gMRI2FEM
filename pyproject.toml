@@ -1,7 +1,7 @@
 [project]
 name = "gmri2fem"
 authors = [{ name = "Jørgen Riseth", email = "jnriseth@gmail.com" }]
-version = "0.2.1"
+version = "0.2.2a1.post1"
 requires-python = ">=3.9,<3.13"
 description = "Processing pipeline for glymphatic MRI."
 readme = "README.md"
@@ -43,7 +43,12 @@ package-dir = { "" = "src" }
 plugins = "numpy.typing.mypy_plugin"
 
 [tool.pixi.project]
-channels = ["conda-forge", "conda-forge/label/fenics-dev", "bioconda", "jorgenriseth", "https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public",
+channels = [
+  "conda-forge",
+  "conda-forge/label/fenics-dev",
+  "bioconda",
+  "jorgenriseth",
+  "https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public",
 ]
 platforms = ["linux-64"]
 
