@@ -12,7 +12,7 @@ import tqdm
 from pantarei import FenicsStorage, fenicsstorage2xdmf
 from simple_mri import load_mri
 
-from gmri2fem.utils import nan_filter_gaussian, nearest_neighbour, find_timestamps
+from gmri2fem.utils import find_timestamps, nan_filter_gaussian, nearest_neighbour
 from i2m.mri2fenics import (
     find_boundary_dofs,
     find_dof_nearest_neighbours,

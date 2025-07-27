@@ -7,12 +7,12 @@ import simple_mri as sm
 from pantarei import read_domain
 from simple_mri import load_mri
 
-from i2m.mri2fenics import find_dof_nearest_neighbours
 from gmri2fem.segmentation_groups import (
     CEREBRAL_CGM_RANGES,
     CEREBRAL_WM_RANGES,
     SUBCORTICAL_GM_RANGES,
 )
+from i2m.mri2fenics import find_dof_nearest_neighbours
 
 
 @click.command("subdomains")
