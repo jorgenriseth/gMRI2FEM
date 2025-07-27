@@ -1,17 +1,17 @@
 import os
 from pathlib import Path
 
+import click
 import numpy as np
-import simple_mri as sm
 import pandas as pd
+import simple_mri as sm
 
-from gmri2fem.masking import create_csf_mask
 from gmri2fem import segment_tools as segtools
+from gmri2fem.masking import create_csf_mask
 from gmri2fem.segmentation_refinement import (
     extrapolate_segmentation_to_mask,
     resample_segmentation,
 )
-
 
 PRECSF_EXCLUDED_SEGMENTS = [
     "Right-choroid-plexus",
@@ -109,18 +109,21 @@ def create_extended_segmentation(
     }
 
 
-def create_extended_segmentation_cli(
-    aparc_path: str, t2w_path: str, wmparc_path: str, output: str
-):
-    aparc_mri = sm.load_mri(aparc_path, dtype=np.int16)
-    t2w_mri = sm.load_mri(t2w_path, dtype=np.single)
-    wmparc_mri = sm.load_mri(wmparc_path, dtype=np.int16)
+@click.command()
+@click.option("--aparc", type=Path, required=True)
+@click.option("--t2w", type=Path, required=True)
+@click.option("--wmparc", type=Path, required=True)
+@click.option("--output", type=Path, required=True)
+def create_extended_segmentation_cli(aparc: str, t2w: str, wmparc: str, output: str):
+    aparc_mri = sm.load_mri(aparc, dtype=np.int16)
+    t2w_mri = sm.load_mri(t2w, dtype=np.single)
+    wmparc_mri = sm.load_mri(wmparc, dtype=np.int16)
 
-    extended_segmentation_d = create_extended_segmentation(
+    extended_segmentation_dict = create_extended_segmentation(
         aparc_mri, t2w_mri, wmparc_mri
     )
-    extended_segmentation_mri = extended_segmentation_d["segmentation"]
-    extended_lut = extended_segmentation_d["LUT"]
+    extended_segmentation_mri = extended_segmentation_dict["segmentation"]
+    extended_lut = extended_segmentation_dict["LUT"]
 
     sm.save_mri(extended_segmentation_mri, Path(output), dtype=np.single)
     segtools.write_lut(

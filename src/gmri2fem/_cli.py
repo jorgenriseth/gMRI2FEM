@@ -1,6 +1,4 @@
 # ruff: disable=F401
-from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -19,6 +17,7 @@ from _cli import LazyGroup
         "t1w-normalize": "gmri2fem.t1_weighted.T1w_normalize",
         "concentration": "gmri2fem.concentration.concentration",
         "reslice4d": "gmri2fem.reslice_4d.reslice4d",
+        "stats": "gmri2fem.regionwise_statistics.compute_mri_stats",
     },
 )
 def mri():
@@ -32,6 +31,7 @@ def mri():
         "mask-intracranial": "gmri2fem.masking.mask_intracranial",
         "mask-csf": "gmri2fem.masking.mask_csf",
         "orbital-refroi": "gmri2fem.orbital_refroi.orbital_refroi",
+        "extended-fs": "gmri2fem.csf_segmentation.create_extended_segmentation_cli",
     },
 )
 def seg():

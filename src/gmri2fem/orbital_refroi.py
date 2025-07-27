@@ -5,8 +5,8 @@ from typing import Literal, Sequence
 import click
 import numpy as np
 import scipy
-import skimage
 import simple_mri as sm
+import skimage
 
 from gmri2fem.utils import largest_island
 
