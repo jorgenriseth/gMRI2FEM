@@ -194,7 +194,10 @@ def find_timestamps(
 
 
 def find_timestamp(
-    timetable_path: Path, timestamp_sequence: str, subject: str, session: str
+    timetable_path: Path,
+    timestamp_sequence: str,
+    subject: str,
+    session: str,
 ) -> float:
     """Find single session timestamp"""
     try:
