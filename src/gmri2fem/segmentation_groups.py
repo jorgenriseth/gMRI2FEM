@@ -1,10 +1,17 @@
+CORPUS_CALLOSUM = [
+    251,
+    252,
+    253,
+    254,
+    255,
+]
 CEREBRAL_WM_RANGES = [
     *[2, 41],  # aseg left/right cerebral white labels
     *list(range(3000, 3036)),  # wmparc-left-labels
     *list(range(4000, 4036)),  # wmparc-right-labels
-    *[5000, 5001],
-    *[28, 60],  # VentralDC included in white matter sudbomain
-    *list(range(251, 256)),  #  Corpus callosum
+    *[5001, 5002],
+    *[28, 60],  # VentralDC included in white matter subdomain
+    *CORPUS_CALLOSUM,  #  Corpus callosum
     *[31, 63],  # Choroid plexus.
 ]
 CEREBRAL_CGM_RANGES = [
@@ -21,60 +28,34 @@ SUBCORTICAL_GM_RANGES = [
     *(18, 54),  # amygdala
     *(26, 58),  # accumbens
 ]
-
+VENTRICLES = [
+    4,  # Left lateral ventricle
+    5,  # Left inferior lateral ventricle
+    14,  # Third ventricle
+    15,  # Fourth ventricle
+    43,  # Right lateral ventricle
+    44,  # Right inferior lateral ventricle
+]
+FREESURFER_CSF = [
+    *VENTRICLES,
+    24,  # Generic CSF
+]
+CORTICAL_CSF = [
+    *(x + 15000 for x in CEREBRAL_CGM_RANGES),
+]
 SEGMENTATION_GROUPS = {
-    "wm-cerebral": CEREBRAL_WM_RANGES,
-    "wm-cerebellar": [7, 46],
-    "wm-hypointensities": [77, 78, 70],
-    "wm-pathological": [77, 78, 79, 80, 100, 109],
-    "cortex-cerebral": CEREBRAL_CGM_RANGES,
-    "cortex-cerebellar": [8, 47],
-    "csf": [4, 5, 14, 15, 24, 43, 44],
-    "cerebellum": [7, 8, 46, 47],
-    "corpus-callosum": [251, 252, 253, 254, 255],
-    "thalamus": [10, 49],
-    "caudate": [11, 50],
-    "putamen": [12, 51],
-    "pallidum": [13, 52],
-    "hippocampus": [17, 53],
-    "amygdala": [18, 54],
-    "accumbens": [26, 58],
-    "brainstem": [16],
-}
-
-COLLECTIONS = {
-    "white-matter": [
-        "wm-cerebral",
-        "wm-cerebellar",
-        "wm-hypointensities",
-        "wm-pathological",
-    ],
-    "gray-matter": [
-        "cortex-cerebral",
-        "cortex-cerebellar",
-        "caudate",
-        "putamen",
-        "pallidum",
-        "hippocampus",
-        "amygdala",
-        "accumbens",
-    ],
-    "basal-ganglias": [
-        "thalamus",
-        "caudate",
-        "putamen",
-        "pallidum",
-        "hippocampus",
-        "amygdala",
-        "accumbens",
-    ],
+    "cerebral-wm": CEREBRAL_WM_RANGES,
+    "cerebral-cortex": CEREBRAL_CGM_RANGES,
+    "cerebellar-wm": [7, 46],  # left, right
+    "cerebellar-cortex": [8, 47],  # left, right
+    "csf-freesurfer": FREESURFER_CSF,
+    "cortical-csf": CORTICAL_CSF,
+    "corpus-callosum": CORPUS_CALLOSUM,
 }
 
 
 def default_segmentation_groups():
     groups = {**SEGMENTATION_GROUPS}
-    for collection, group_labels in COLLECTIONS.items():
-        groups[collection] = sum([groups[label] for label in group_labels], start=[])
     return groups
 
 
