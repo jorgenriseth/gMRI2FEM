@@ -19,7 +19,7 @@ def mri_data_to_ndarray(
 
 def pyvista_mesh_to_mri(
     mesh: pv.DataSet, point_data_names: str | list[str], reference_mri: sm.SimpleMRI
-) -> sm.SimpleMRI:
+) -> dict[str, sm.SimpleMRI]:
     if isinstance(point_data_names, str):
         point_data_names = [point_data_names]
 

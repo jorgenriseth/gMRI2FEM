@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import numpy as np
+import pandas as pd
 import scipy as sp
 import skimage
 import tqdm
-import pandas as pd
 
 
 def apply_affine(T: np.ndarray, X: np.ndarray) -> np.ndarray:
@@ -167,7 +167,11 @@ def to_scientific(num, decimals):
     return f"{m.group(1)}\\times10^{{{int(m.group(2))}}}"
 
 
-def find_timestamps(timetable_path: Path, subject: str, sequence_name: str):
+def find_timestamps(
+    timetable_path: Path,
+    sequence_name: str,
+    subject: str,
+):
     try:
         timetable = pd.read_csv(timetable_path, sep="\t")
     except pd.errors.EmptyDataError:
@@ -190,21 +194,36 @@ def find_timestamps(timetable_path: Path, subject: str, sequence_name: str):
 
 
 def find_timestamp(
-    timetable_path: Path, timestamp_sequence: str, subject: str, session: str
+    timetable_path: Path,
+    timestamp_sequence: str,
+    subject: str,
+    session: str,
 ) -> float:
-    """TODO: Merge with above function"""
+    """Find single session timestamp"""
     try:
         timetable = pd.read_csv(timetable_path, sep="\t")
     except pd.errors.EmptyDataError:
         raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
     try:
         timestamp = timetable.loc[
-            (timetable["sequence_name"] == timestamp_sequence)
+            (timetable["sequence_name"].str.lower() == timestamp_sequence)
             & (timetable["subject"] == subject)
             & (timetable["session"] == session)
         ]["acquisition_relative_injection"]
     except ValueError as e:
         print(timetable)
-        print(timestamp_sequence, subject, session)
+        print(timestamp_sequence, subject)
         raise e
     return timestamp.item()
+
+
+def prepend_info(df, **kwargs):
+    nargs = len(kwargs)
+    for key, val in kwargs.items():
+        assert key not in df.columns, f"Column {key} already exist in df."
+        df[key] = val
+    return df[[*df.columns[-nargs:], *df.columns[:-nargs]]]
+
+
+def with_suffix(p: Path, newsuffix: str) -> Path:
+    return p.parent / f"{p.name.split('.')[0]}{newsuffix}"

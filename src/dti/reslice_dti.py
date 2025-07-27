@@ -7,6 +7,7 @@ import click
 import numpy as np
 from simple_mri import SimpleMRI, load_mri, save_mri
 
+from dti.utils import mri_number_of_frames
 from gmri2fem.reslice_4d import reslice_4d
 
 
@@ -119,11 +120,7 @@ def reslice_dti(
 @click.option("--input", type=Path, required=True)
 @click.option("--output", type=Path, required=True)
 def create_eddy_index_file(input: Path, output: Path):
-    nframes = int(
-        subprocess.check_output(
-            f"mri_info --nframes {input} | grep -v INFO", shell=True
-        )
-    )
+    nframes = mri_number_of_frames(input)
     index = ["1"] * nframes
     with open(output, "w") as f:
         f.write(" ".join(index))

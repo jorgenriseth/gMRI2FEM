@@ -7,6 +7,7 @@ import numpy as np
 import pyvista as pv
 import scipy
 import simple_mri as sm
+from dolfin import inner
 from pantarei import FenicsStorage
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
@@ -33,10 +34,10 @@ def mri2fem_interpolate_quadrature(data_mri, V_target, quad_degree, mask=None):
 
     dx = df.Measure("dx", metadata={"quadrature_degree": quad_degree})
     u, v = df.TrialFunction(V_target), df.TestFunction(V_target)
-    a = u * v * dx
-    l = q * v * dx
+    a = inner(u, v) * dx
+    L = inner(q, v) * dx
     A = df.assemble(a)
-    b = df.assemble(l)
+    b = df.assemble(L)
     uh = df.Function(V_target)
     df.solve(A, uh.vector(), b)
     return uh
@@ -57,7 +58,7 @@ def dolfin_mesh_to_pyvista_ugrid(mesh):
 def dolfin2mri(
     u: df.Function,
     reference_mri: sm.SimpleMRI,
-    grid: pv.UnstructuredGrid = None,
+    grid: Optional[pv.UnstructuredGrid] = None,
     fieldname: str = "",
 ):
     ugrid = grid or dolfin_mesh_to_pyvista_ugrid(u.function_space().mesh())

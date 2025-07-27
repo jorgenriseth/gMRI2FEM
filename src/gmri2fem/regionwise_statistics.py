@@ -1,77 +1,162 @@
+import re
 from pathlib import Path
+from typing import Optional
 
+import click
 import numpy as np
 import pandas as pd
+import simple_mri as sm
 import tqdm
-from simple_mri import assert_same_space, load_mri
 
+import gmri2fem.segment_tools as segtools
+from gmri2fem.segment_tools import find_label_description, read_lut
 from gmri2fem.segmentation_groups import default_segmentation_groups
-from gmri2fem.segment_tools import read_lut, find_label_description
-
-REGION_STAT_FUNCTIONS = {
-    "mean": np.mean,
-    "median": np.median,
-    "std": np.std,
-    "PC1": lambda x: np.quantile(x, 0.01),
-    "PC5": lambda x: np.quantile(x, 0.05),
-    "PC95": lambda x: np.quantile(x, 0.95),
-    "PC99": lambda x: np.quantile(x, 0.99),
-}
+from gmri2fem.utils import find_timestamp, with_suffix, prepend_info, find_timestamps
 
 
-def find_timestamp(
-    timetable_path: Path, timestamp_sequence: str, subject: str, session: str
-) -> float:
-    try:
-        timetable = pd.read_csv(timetable_path, sep="\t")
-    except pd.errors.EmptyDataError:
-        raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
-    try:
-        timestamp = timetable.loc[
-            (timetable["sequence_label"] == timestamp_sequence)
-            & (timetable["subject"] == subject)
-            & (timetable["session"] == session)
-        ]["acquisition_relative_injection"]
-    except ValueError as e:
-        print(timetable)
-        print(timestamp_sequence, subject, session)
-        raise e
-    return timestamp.item()
+@click.command("mristats")
+@click.option("--segmentation", "-s", "seg_path", type=Path, required=True)
+@click.option("--mri", "-m", "mri_paths", multiple=True, type=Path, required=True)
+@click.option("--output", "-o", type=Path, required=True)
+@click.option("--timetable", "-t", type=Path)
+@click.option("--timelabel", "-l", "timetable_sequence", type=str)
+def compute_mri_stats(
+    seg_path: str | Path,
+    mri_paths: tuple[str | Path],
+    output: str | Path,
+    timetable: Optional[str | Path],
+    timetable_sequence: Optional[str | Path],
+):
+    if not Path(seg_path).exists():
+        raise RuntimeError(f"Missing segmentation: {seg_path}")
+
+    for path in mri_paths:
+        if not Path(path).exists():
+            raise RuntimeError(f"Missing: {path}")
+
+    dataframes = [
+        create_dataframe(
+            Path(seg_path),
+            Path(path),
+            timetable,
+            timetable_sequence,
+        )
+        for path in mri_paths
+    ]
+    pd.concat(dataframes).to_csv(output, sep=";", index=False)
+
+
+def segstats_region(seg_mri, description, labels):
+    region_mask = np.isin(seg_mri.data, labels)
+    voxelcount = region_mask.sum()
+    volscale = voxel_count_to_ml_scale(seg_mri.affine)
+    return {
+        "label": ",".join([str(x) for x in labels]),
+        "description": description,
+        "voxelcount": voxelcount,
+        "volume_ml": volscale * voxelcount,
+    }
 
 
 def create_dataframe(
-    subject: str,
-    session: str,
-    sequence: str,
-    timestamp_sequence: str,
-    mri_path: Path,
     seg_path: Path,
-    timestamps_path: Path,
+    mri_path: Path,
+    timestamp_path: Optional[str | Path] = None,
+    timestamp_sequence: Optional[str | Path] = None,
 ) -> pd.DataFrame:
-    seg_mri = load_mri(seg_path, dtype=np.int16)
-    data_mri = load_mri(mri_path, dtype=np.single)
-    assert_same_space(seg_mri, data_mri)
-    seg, data = seg_mri.data, data_mri.data
+    data_mri = sm.load_mri(mri_path, dtype=np.single)
+    seg_mri = sm.load_mri(seg_path, dtype=np.int16)
+    sm.assert_same_space(seg_mri, data_mri)
 
+    seg_pattern = (
+        r"(?P<subject>sub-(control|patient)*\d{2})_seg-(?P<segmentation>[^\.]+)"
+    )
+    mri_data_pattern = r"(?P<subject>sub-(control|patient)*\d{2})_(?P<session>ses-\d{2})_(?P<mri_data>[^\.]+)"
+    lut_path = with_suffix(Path(seg_path), "_LUT.txt")
+    if Path(lut_path).exists():
+        lut = segtools.read_lut(lut_path)
+    else:
+        lut = segtools.read_lut(None)
+
+    seg, data = seg_mri.data, data_mri.data
     seg_labels = np.unique(seg[seg != 0])
-    fs_lut = read_lut(None)
-    seg_descriptions = [
-        fs_lut["description"][fs_lut["label"] == label].item() for label in seg_labels
-    ]
+    lut_regions = lut.loc[lut.label.isin(seg_labels), ["label", "description"]].to_dict(
+        "records"
+    )
     regions = {
-        **{region: [int(label)] for region, label in zip(seg_descriptions, seg_labels)},
+        **{d["description"]: sorted([d["label"]]) for d in lut_regions},
         **default_segmentation_groups(),
     }
-    dframe = compute_region_statistics(data, seg, regions)
-
-    timestamp = find_timestamp(timestamps_path, timestamp_sequence, subject, session)
-    timestamp = max(0, timestamp)
-
-    new_cols = ["subject", "session", "sequence", "timestamp"] + list(dframe.columns)
-    newframe = dframe.assign(
-        subject=subject, session=session, sequence=sequence, timestamp=timestamp
+    seg_info = (
+        m.groupdict()
+        if (m := re.match(seg_pattern, Path(seg_path).name)) is not None
+        else {"segmentation": None, "subject": None}
     )
-    return newframe.loc[:, new_cols]
+    data_info = (
+        m.groupdict()
+        if (m := re.match(mri_data_pattern, Path(mri_path).name)) is not None
+        else {"mri_data": None, "subject": None, "session": None}
+    )
+    try:
+        data_info["timestamp"] = find_timestamp(
+            Path(str(timestamp_path)),
+            str(timestamp_sequence),
+            str(data_info["subject"]),
+            str(data_info["session"]),
+        )
+    except (ValueError, RuntimeError, KeyError):
+        data_info["timestamp"] = None
+
+    info = seg_info | data_info
+
+    records = []
+    finite_mask = np.isfinite(data)
+    volscale = voxel_count_to_ml_scale(seg_mri.affine)
+    for description, labels in tqdm.tqdm(regions.items()):
+        region_mask = np.isin(seg_mri.data, labels)
+        voxelcount = region_mask.sum()
+        record = {
+            "label": ",".join([str(x) for x in labels]),
+            "description": description,
+            "voxelcount": voxelcount,
+            "volume_ml": volscale * voxelcount,
+        }
+        if voxelcount == 0:
+            records.append(record)
+            continue
+
+        data_mask = region_mask * finite_mask
+        region_data = data[data_mask]
+        num_nan = (~np.isfinite(region_data)).sum()
+        record["num_nan_values"] = num_nan
+        if num_nan == voxelcount:
+            records.append(record)
+            continue
+
+        stats = {
+            "sum": np.sum(region_data),
+            "mean": np.mean(region_data),
+            "median": np.median(region_data),
+            "std": np.std(region_data),
+            "min": np.min(region_data),
+            **{
+                f"PC{pc}": np.quantile(region_data, pc / 100)
+                for pc in [1, 5, 25, 75, 90, 95, 99]
+            },
+            "max": np.max(region_data),
+        }
+        records.append({**record, **stats})
+
+    dframe = pd.DataFrame.from_records(records)
+    dframe = prepend_info(
+        dframe,
+        segmentation=info["segmentation"],
+        mri_data=info["mri_data"],
+        subject=info["subject"],
+        session=info["session"],
+        timestamp=info["timestamp"],
+    )
+    return dframe
 
 
 def compute_region_statistics(
@@ -94,10 +179,15 @@ def compute_region_statistics(
                 "FS_LUT-voxelcount": voxelcount,
                 "region_total": np.sum(region_data),
             },
-            **{
-                f"{stat}": func(region_data) if voxelcount > 0 else np.nan
-                for stat, func in REGION_STAT_FUNCTIONS.items()
-            },
+            "mean": np.mean,
+            "median": np.median,
+            "std": np.std,
+            "min": lambda x: np.min(x),
+            "PC1": lambda x: np.quantile(x, 0.01),
+            "PC5": lambda x: np.quantile(x, 0.05),
+            "PC95": lambda x: np.quantile(x, 0.95),
+            "PC99": lambda x: np.quantile(x, 0.99),
+            "max": lambda x: np.max(x),
         }
         records.append(group_regions)
     return pd.DataFrame.from_records(records)
@@ -108,6 +198,7 @@ def voxel_count_to_ml_scale(affine: np.ndarray):
 
 
 def segstats(seg: np.ndarray, lut: pd.DataFrame, volscale: float):
+    lut = lut or read_lut(None)
     labels = np.unique(seg[seg > 0])
     seg_table = pd.DataFrame.from_records(
         [
@@ -137,29 +228,4 @@ def segstats(seg: np.ndarray, lut: pd.DataFrame, volscale: float):
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--subject", type=str, required=True)
-    parser.add_argument("--subject_session", type=str, required=True)
-    parser.add_argument("--sequence", type=str, required=True)
-    parser.add_argument("--timestamp_sequence", type=str)
-    parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--seg", type=Path, required=True)
-    parser.add_argument("--timestamps", type=Path, required=True)
-    parser.add_argument("--lutfile", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-
-    if args.timestamp_sequence is None:
-        args.timestamp_sequence = args.sequence
-    dframe = create_dataframe(
-        subject=args.subject,
-        session=args.subject_session,
-        sequence=args.sequence,
-        timestamp_sequence=args.timestamp_sequence,
-        mri_path=args.data,
-        seg_path=args.seg,
-        timestamps_path=args.timestamps,
-    )
-    dframe.to_csv(Path(args.output), index=False, sep=";")
+    compute_mri_stats()

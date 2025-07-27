@@ -4,13 +4,15 @@ import click
 import dolfin as df
 import numpy as np
 import simple_mri as sm
-import tqdm
 from pantarei import read_domain
 from simple_mri import load_mri
 
-from gmri2fem.utils import apply_affine
-from i2m.concentrations_to_mesh import nearest_neighbour
-from i2m.mri2fenics import find_dof_nearest_neighbours, locate_dof_voxels
+from gmri2fem.segmentation_groups import (
+    CEREBRAL_CGM_RANGES,
+    CEREBRAL_WM_RANGES,
+    SUBCORTICAL_GM_RANGES,
+)
+from i2m.mri2fenics import find_dof_nearest_neighbours
 
 
 @click.command("subdomains")
@@ -21,31 +23,8 @@ def subdomains(*args, **kwargs):
     segments_to_mesh(*args, **kwargs)
 
 
-CEREBRAL_WM_RANGES = [
-    *[2, 41],  # aseg left/right cerebral white labels
-    *list(range(3000, 3036)),  # wmparc-left-labels
-    *list(range(4000, 4036)),  # wmparc-right-labels
-    *[5000, 5001],
-    *[28, 60],  # VentralDC included in white matter sudbomain
-    *list(range(251, 256)),  #  Corpus callosum
-    *[31, 63],  # Choroid plexus.
-]
-CEREBRAL_GM_RANGES = [
-    *[3, 42],  # aseg left/right cortcal gm
-    *list(range(1000, 1036)),  # aparc left labels
-    *list(range(2000, 2036)),  # aparc right labels
-]
-SUBCORTICAL_GM_RANGES = [
-    *(10, 49),  # Thalamus,
-    *(11, 50),  # Caudate,
-    *(12, 51),  # Putamen,
-    *(13, 52),  # pallidum
-    *(17, 53),  # hippocampus
-    *(18, 54),  # amygdala
-    *(26, 58),  # accumbens
-]
 subdomain_allowed = {
-    1: CEREBRAL_GM_RANGES,
+    1: CEREBRAL_CGM_RANGES,
     2: CEREBRAL_WM_RANGES,
     3: SUBCORTICAL_GM_RANGES,
 }
