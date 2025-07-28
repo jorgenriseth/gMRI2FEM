@@ -4,7 +4,8 @@ from pathlib import Path
 from re import subn
 from typing import Optional
 
-from dti.utils import create_mask, with_suffix
+from dti.utils import create_mask
+from gmri2fem.utils import with_suffix
 
 
 def dtifit(

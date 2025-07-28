@@ -3,7 +3,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from dti.utils import create_mask, mri_number_of_frames, with_suffix
+from dti.utils import create_mask, mri_number_of_frames
+from gmri2fem.utils import with_suffix
 
 
 def eddy_correct(
