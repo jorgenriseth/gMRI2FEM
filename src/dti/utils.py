@@ -1,6 +1,6 @@
 import subprocess
 import nibabel
-from nibabel.filebasedimages import SpatialImage
+from nibabel.spatialimages import SpatialImage
 from pathlib import Path
 
 
