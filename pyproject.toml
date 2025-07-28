@@ -64,3 +64,6 @@ h5py = ">=3.12.1,<4"
 fsl-eddy = "*"
 fsl-topup = "*"
 fsl-fdt = "*"
+
+[tool.pixi.activation]
+env = { FSLDIR = "$CONDA_PREFIX", FSLOUTPUTTYPE = "NIFTI_GZ" }
