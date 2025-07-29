@@ -1501,7 +1501,7 @@ packages:
 - pypi: ./
   name: gmri2fem
   version: 0.2.6
-  sha256: 5e0d24a20567fd8d0c6c404966fd7896c0ad217d153a49984ec6c99eb771f603
+  sha256: 96f793060f2380e0621bd54aec418c388c4e1b2af56ddb74d5a6d9cbafc01809
   requires_dist:
   - loguru
   - matplotlib
@@ -1514,8 +1514,8 @@ packages:
   - scikit-image
   - scipy
   - tqdm
-  - simple-mri>=0.1.6
-  - panta-rhei>=0.7.0
+  - simple-mri
+  - panta-rhei
   - click
   - vtk
   - pyvista[all]
