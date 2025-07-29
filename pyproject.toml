@@ -20,7 +20,7 @@ dependencies = [
   "scipy",
   "tqdm",
   "simple-mri>=0.1.6",
-  "panta-rhei",
+  "panta-rhei>=0.7.0",
   "click",
   "vtk",
   "pyvista[all]",
