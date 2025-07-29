@@ -3,7 +3,7 @@ from typing import Optional
 
 import click
 import dolfin as df
-import pantarei as pr
+import panta_rhei as pr
 
 
 def collect_mesh_data(

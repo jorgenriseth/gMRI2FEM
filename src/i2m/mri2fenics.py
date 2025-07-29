@@ -8,7 +8,7 @@ import pyvista as pv
 import scipy
 import simple_mri as sm
 from dolfin import inner
-from pantarei import FenicsStorage
+from panta_rhei import FenicsStorage
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
 from i2m.vtk2mri import mri_data_to_ndarray

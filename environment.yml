@@ -20,7 +20,7 @@ dependencies:
 - colorcet
 - imageio-ffmpeg
 - tqdm
-- pantarei
+- panta-rhei
 - pymeshfix
 - cxx-compiler <1.7
 - fenics >=2019

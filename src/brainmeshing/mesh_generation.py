@@ -9,7 +9,7 @@ import simple_mri as sm
 import skimage
 import SVMTK as svmtk
 from loguru import logger
-from pantarei.meshprocessing import mesh2xdmf, xdmf2hdf
+from panta_rhei.meshprocessing import mesh2xdmf, xdmf2hdf
 
 from brainmeshing.utils import (
     binary_image_surface_extraction,

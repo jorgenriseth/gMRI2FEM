@@ -4,7 +4,7 @@ import click
 import dolfin as df
 import meshio
 import numpy as np
-import pantarei as pr
+import panta_rhei as pr
 import pyvista as pv
 
 

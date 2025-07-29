@@ -4,7 +4,7 @@ import click
 import dolfin as df
 import numpy as np
 import simple_mri as sm
-from pantarei import read_domain
+from panta_rhei import read_domain
 from simple_mri import load_mri
 
 from gmri2fem.segmentation_groups import (

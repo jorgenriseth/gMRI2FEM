@@ -6,10 +6,10 @@ import click
 import dolfin as df
 import numpy as np
 import pandas as pd
-import pantarei as pr
+import panta_rhei as pr
 import skimage
 import tqdm
-from pantarei import FenicsStorage, fenicsstorage2xdmf
+from panta_rhei import FenicsStorage, fenicsstorage2xdmf
 from simple_mri import load_mri
 
 from gmri2fem.utils import find_timestamps, nan_filter_gaussian, nearest_neighbour

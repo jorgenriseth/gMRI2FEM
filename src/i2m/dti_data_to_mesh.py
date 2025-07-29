@@ -29,7 +29,7 @@ import click
 import dolfin as df
 import nibabel
 import numpy as np
-import pantarei as pr
+import panta_rhei as pr
 import simple_mri as sm
 from nibabel.affines import apply_affine
 from ufl import dev, inner, sqrt, tr
