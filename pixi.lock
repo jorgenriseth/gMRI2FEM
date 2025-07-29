@@ -1500,8 +1500,8 @@ packages:
   timestamp: 1745509508879
 - pypi: ./
   name: gmri2fem
-  version: 0.2.5
-  sha256: 986f405c0385422d40705f3febe896d1a785703de7516e96d650c68b70be590d
+  version: 0.2.6
+  sha256: 5e0d24a20567fd8d0c6c404966fd7896c0ad217d153a49984ec6c99eb771f603
   requires_dist:
   - loguru
   - matplotlib

@@ -71,6 +71,7 @@ def construct_and_save_tensor(
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
 @click.option("--suffix", type=str, default="")
+@click.option("--interp_mode", type=str, default="NN")
 @click.option("--greedyargs", type=str, default="")
 def reslice_dti(
     fixed: Path,
@@ -81,6 +82,7 @@ def reslice_dti(
     threads: int,
     out_pattern: Optional[str] = None,
     suffix: str = None,
+    interp_mode: str = "NN",
     greedyargs: str = None,
 ):
     if out_pattern is None:
@@ -92,7 +94,15 @@ def reslice_dti(
     for c in ["FA", "MD", *[f"L{i}" for i in range(1, 4)]]:
         inpath = dtidir / f"{prefix_pattern}_{c}.nii.gz"
         outpath = outdir / f"{out_pattern}_{c}{suffix}.nii.gz"
-        reslice_4d(inpath, fixed, outpath, transform, threads, greedyargs=greedyargs)
+        reslice_4d(
+            inpath,
+            fixed,
+            outpath,
+            transform,
+            threads,
+            interp_mode=interp_mode,
+            greedyargs=greedyargs,
+        )
 
     with tempfile.TemporaryDirectory(prefix=out_pattern) as tmpdir:
         tmppath = Path(tmpdir)
@@ -101,7 +111,13 @@ def reslice_dti(
             resliced = tmppath / f"{out_pattern}_{Vi}{suffix}.nii.gz"
             outpath = outdir / resliced.name
             reslice_4d(
-                inpath, fixed, resliced, transform, threads, greedyargs=greedyargs
+                inpath,
+                fixed,
+                resliced,
+                transform,
+                threads,
+                interp_mode=interp_mode,
+                greedyargs=greedyargs,
             )
             resliced_mri = load_mri(resliced, dtype=np.single)
             norms = np.linalg.norm(resliced_mri.data, axis=-1, ord=2)
