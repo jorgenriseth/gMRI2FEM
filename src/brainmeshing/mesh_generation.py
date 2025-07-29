@@ -205,12 +205,12 @@ def extract_subcortical_gm(
     subcort_gm_mask = segmentation_smoothing(
         seg_mri.data, label_smoothing, cutoff_score=1 / 2
     )
-    basal_ganglia_mask = np.isin(
-        subcort_gm_mask["labels"], default_segmentation_groups()["basal-ganglias"]
+    subcortical_gm_mask = np.isin(
+        subcort_gm_mask["labels"], default_segmentation_groups()["subcortical-gm"]
     )
     subcortical_gm = binary_image_surface_extraction(
         skimage.morphology.binary_dilation(
-            basal_ganglia_mask, skimage.morphology.cube(3)
+            subcortical_gm_mask, skimage.morphology.cube(3)
         ),
         sigma=binary_smoothing,
         cutoff=1 / 2,

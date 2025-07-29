@@ -51,6 +51,7 @@ SEGMENTATION_GROUPS = {
     "csf-freesurfer": FREESURFER_CSF,
     "cortical-csf": CORTICAL_CSF,
     "corpus-callosum": CORPUS_CALLOSUM,
+    "subcortical-gm": SUBCORTICAL_GM_RANGES,
 }
 
 
