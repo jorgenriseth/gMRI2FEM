@@ -76,7 +76,16 @@ def process_cerebral_surfaces(
     subcortical_gm = extract_subcortical_gm(seg_mri)
     pv.save_meshio(f"{surface_dir}/subcortical_gm.stl", subcortical_gm)
 
-    fs_surf_to_stl(f"{fs_dir}/surf", Path(surface_dir), suffix="", verbose=True)
+    for surf in ["lh_pial.stl", "rh_pial.stl", "lh_white.stl", "rh_white.stl"]:
+        if not Path(f"{surface_dir}/{surf}").exists():
+            try:
+                fs_surf_to_stl(
+                    f"{fs_dir}/surf", Path(surface_dir), suffix="", verbose=True
+                )
+            except Exception as e:
+                raise RuntimeError(
+                    f"Couldn't find {surf} in {surface_dir}. Attempt at creation failed with error:\n{e}"
+                )
     preprocess_white_matter_surfaces(fs_dir, surface_dir)
     preprocess_pial_surfaces(surface_dir)
 
