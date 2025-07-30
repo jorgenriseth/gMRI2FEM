@@ -176,20 +176,27 @@ def find_timestamps(
         timetable = pd.read_csv(timetable_path, sep="\t")
     except pd.errors.EmptyDataError:
         raise RuntimeError(f"Timetable-file {timetable_path} is empty.")
-    subject_sequence_entries = (timetable["subject"] == subject) & (
-        timetable["sequence_name"].str.lower() == sequence_name
-    )
+    if "sequence_name" in timetable.columns:
+        seqlabel = "sequence_name"
+    elif "sequence_label" in timetable.columns:
+        seqlabel = "sequence_label"
+    else:
+        raise RuntimeError("Cant find column 'sequence_name' or 'sequence_label'")
+    subject_sequence_entries = (
+        (timetable.subject == subject) 
+        &(timetable[seqlabel].str.lower() == sequence_name)
+    )  # fmt: skip
     try:
         acq_times = timetable.loc[subject_sequence_entries][
             "acquisition_relative_injection"
         ]
-    except ValueError as e:
+        times = np.array(acq_times)
+        assert len(times) > 0, f"Couldn't find time for {subject}: {sequence_name}"
+    except (AssertionError, ValueError) as e:
         print(timetable)
         print(subject, sequence_name)
         print(subject_sequence_entries)
         raise e
-    times = np.array(acq_times)
-    assert len(times) > 0, f"Couldn't find time for {subject}: {sequence_name}"
     return times
 
 

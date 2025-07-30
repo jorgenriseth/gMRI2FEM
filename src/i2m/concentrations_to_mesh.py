@@ -60,7 +60,7 @@ def map_concentration(
         csf_mask_mri.data, skimage.morphology.ball(1)
     )
 
-    timestamps = np.maximum(0, find_timestamps(timetable, subject, "looklocker"))
+    timestamps = np.maximum(0, find_timestamps(timetable, "looklocker", subject))
     domain = pr.hdf2fenics(meshpath, pack=True)
     V = df.FunctionSpace(domain, femfamily, femdegree)
 
