@@ -1,5 +1,6 @@
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -236,13 +237,12 @@ def pyvista2svmtk(
     with tempfile.TemporaryDirectory() as tmp_path:
         tmpfile = Path(tmp_path) / f"tmpsurf{ft}"
         pv.save_meshio(tmpfile, pv_grid)
+        time.sleep(1)
         try:
             svmtk_grid = svmtk.Surface(str(tmpfile))
         except AttributeError:
-            logger.warning("Sleeping 10 seconds")
             # Potential error due to slow I/O, wait a bit and retry.
-            import time
-
+            logger.warning("Sleeping 10 seconds")
             time.sleep(10)
             svmtk_grid = svmtk.Surface(str(tmpfile))
     return svmtk_grid
