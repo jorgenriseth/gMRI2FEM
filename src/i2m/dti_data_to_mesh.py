@@ -27,12 +27,9 @@ from pathlib import Path
 
 import click
 import dolfin as df
-import nibabel
 import numpy as np
 import panta_rhei as pr
 import simple_mri as sm
-from nibabel.affines import apply_affine
-from ufl import dev, inner, sqrt, tr
 
 from dti.clean_dti_data import extend_to_9_component_array
 from i2m.mri2fenics import find_dof_nearest_neighbours, locate_dof_voxels
