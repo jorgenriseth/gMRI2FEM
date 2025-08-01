@@ -19,7 +19,7 @@ def construct_tensor_from_eigs(
     spatial_shape = eigvec.data.shape[:3]
     V = np.zeros((*spatial_shape, 3, 3), dtype=eigvec.data.dtype)
     L = np.zeros_like(V)
-    for i in tqdm.tqdm(range(1, 4), total=3):
+    for i in range(1, 4):
         eigvec = load_mri(
             dti_folder / f"{prefix_pattern}_V{i}{suffix}.nii.gz", np.single
         )
