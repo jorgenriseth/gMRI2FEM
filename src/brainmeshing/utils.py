@@ -1,5 +1,6 @@
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -236,7 +237,14 @@ def pyvista2svmtk(
     with tempfile.TemporaryDirectory() as tmp_path:
         tmpfile = Path(tmp_path) / f"tmpsurf{ft}"
         pv.save_meshio(tmpfile, pv_grid)
-        svmtk_grid = svmtk.Surface(str(tmpfile))
+        time.sleep(1)
+        try:
+            svmtk_grid = svmtk.Surface(str(tmpfile))
+        except AttributeError:
+            # Potential error due to slow I/O, wait a bit and retry.
+            logger.warning("Sleeping 10 seconds")
+            time.sleep(10)
+            svmtk_grid = svmtk.Surface(str(tmpfile))
     return svmtk_grid
 
 
@@ -247,7 +255,19 @@ def svmtk2pyvista(
     with tempfile.TemporaryDirectory() as tmp_path:
         tmpfile = Path(tmp_path) / f"tmpsurf{ft}"
         svmtk_surface.save(str(tmpfile))
-        pv_grid = pv.read(tmpfile)
+        try:
+            pv_grid = pv.read(tmpfile)
+            if pv_grid.number_of_cells == 0:
+                raise RuntimeError(f"Mesh in {tmpfile} is empty.")
+        except (AttributeError, RuntimeError):
+            print("Sleeping 10 seconds")
+            # Potential error due to slow I/O, wait a bit and retry.
+            import time
+
+            time.sleep(10)
+            pv_grid = pv.read(tmpfile)
+            if pv_grid.number_of_cells == 0:
+                raise RuntimeError(f"Mesh in {tmpfile} is empty.")
     return pv_grid
 
 

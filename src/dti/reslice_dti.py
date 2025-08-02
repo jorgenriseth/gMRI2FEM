@@ -1,11 +1,12 @@
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Optional
 
 import click
 import numpy as np
+import tqdm
 from simple_mri import SimpleMRI, load_mri, save_mri
+from loguru import logger
 
 from dti.utils import mri_number_of_frames
 from gmri2fem.reslice_4d import reslice_4d
@@ -16,8 +17,8 @@ def construct_tensor_from_eigs(
 ) -> SimpleMRI:
     eigvec = load_mri(dti_folder / f"{prefix_pattern}_V1{suffix}.nii.gz", np.single)
     spatial_shape = eigvec.data.shape[:3]
-    B = np.zeros((*spatial_shape, 3, 3), dtype=eigvec.data.dtype)
-    L = np.zeros_like(B)
+    V = np.zeros((*spatial_shape, 3, 3), dtype=eigvec.data.dtype)
+    L = np.zeros_like(V)
     for i in range(1, 4):
         eigvec = load_mri(
             dti_folder / f"{prefix_pattern}_V{i}{suffix}.nii.gz", np.single
@@ -25,12 +26,18 @@ def construct_tensor_from_eigs(
         eigval = load_mri(
             dti_folder / f"{prefix_pattern}_L{i}{suffix}.nii.gz", np.single
         )
-        B[..., :, i - 1] = eigvec.data
+        V[..., :, i - 1] = eigvec.data
         L[..., i - 1, i - 1] = eigval.data
-    valid_mask = np.linalg.det(L) != 0
-    Binv = np.zeros_like(B)
-    Binv[valid_mask] = np.linalg.inv(B[valid_mask])
-    return SimpleMRI((B @ L @ Binv).reshape(*spatial_shape, 9), eigvec.affine)
+
+    logger.info("Determining voxel of interest based on determinants")
+    determinants = np.diagonal(L, axis1=-2, axis2=-1).prod(axis=-1)
+    valid_mask = determinants != 0
+
+    B = V.transpose(0, 1, 2, -1, -2)
+    logger.info("Solving for diffusion tensor")
+    D = np.zeros_like(B)
+    D[valid_mask] = np.linalg.solve(B[valid_mask], L[valid_mask] @ B[valid_mask])
+    return SimpleMRI(D.reshape(*spatial_shape, 9), eigvec.affine)
 
 
 def construct_tensor_from_vector_array(tensor: SimpleMRI) -> SimpleMRI:
@@ -71,7 +78,8 @@ def construct_and_save_tensor(
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
 @click.option("--suffix", type=str, default="")
-@click.option("--greedyargs", type=str, default="")
+@click.option("--interp_mode", type=str, default="NN")
+@click.option("--greedyargs", type=str, default="-V 0")
 def reslice_dti(
     fixed: Path,
     dtidir: Path,
@@ -80,20 +88,28 @@ def reslice_dti(
     transform: Path,
     threads: int,
     out_pattern: Optional[str] = None,
-    suffix: str = None,
-    greedyargs: str = None,
+    suffix: str = "",
+    interp_mode: str = "NN",
+    greedyargs: str = "-V 0",
 ):
     if out_pattern is None:
         out_pattern = prefix_pattern
 
-    if greedyargs is None:
-        greedyargs = ""
-
+    logger.info("Reslicing FA, MD and eigenvalues")
     for c in ["FA", "MD", *[f"L{i}" for i in range(1, 4)]]:
         inpath = dtidir / f"{prefix_pattern}_{c}.nii.gz"
         outpath = outdir / f"{out_pattern}_{c}{suffix}.nii.gz"
-        reslice_4d(inpath, fixed, outpath, transform, threads, greedyargs=greedyargs)
+        reslice_4d(
+            inpath,
+            fixed,
+            outpath,
+            transform,
+            threads,
+            interp_mode=interp_mode,
+            greedyargs=greedyargs,
+        )
 
+    logger.info("Reslicing eigenvectors")
     with tempfile.TemporaryDirectory(prefix=out_pattern) as tmpdir:
         tmppath = Path(tmpdir)
         for Vi in [f"V{i}" for i in range(1, 4)]:
@@ -101,13 +117,20 @@ def reslice_dti(
             resliced = tmppath / f"{out_pattern}_{Vi}{suffix}.nii.gz"
             outpath = outdir / resliced.name
             reslice_4d(
-                inpath, fixed, resliced, transform, threads, greedyargs=greedyargs
+                inpath,
+                fixed,
+                resliced,
+                transform,
+                threads,
+                interp_mode=interp_mode,
+                greedyargs=greedyargs,
             )
             resliced_mri = load_mri(resliced, dtype=np.single)
             norms = np.linalg.norm(resliced_mri.data, axis=-1, ord=2)
             resliced_mri.data[norms > 0] /= norms[norms > 0, np.newaxis]
             save_mri(resliced_mri, outpath, dtype=np.single)
 
+    logger.info("Reconstructing tensor from eigenvectors and -values")
     resliced_tensor = construct_tensor_from_eigs(outdir, out_pattern, suffix)
     save_mri(
         resliced_tensor,

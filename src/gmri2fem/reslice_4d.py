@@ -22,6 +22,7 @@ def moving_pair(args):
 @click.option("--transform", type=Path)
 @click.option("--threads", type=int, default=1)
 @click.option("--tmppath", type=Path)
+@click.option("--interp_mode", type=str, default="NN")
 @click.option("--greedyargs", type=str)
 def reslice4d(**kwargs):
     reslice_4d(**kwargs)
@@ -34,6 +35,7 @@ def reslice_4d(
     transform: Optional[Path] = None,
     threads: int = 1,
     tmppath: Optional[Path] = None,
+    interp_mode: str = "NN",
     greedyargs: Optional[str] = None,
 ) -> Path:
     if transform is None:
@@ -53,7 +55,7 @@ def reslice_4d(
             f"fslroi {inpath} {tmp_split} {i} 1", shell=True
         ).check_returncode()
         subprocess.run(
-            f"greedy -d 3 -rf {fixed} {greedyargs} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads} ",
+            f"greedy -d 3 -rf {fixed} -ri {interp_mode} {greedyargs} -rm {tmp_split} {tmp_reslice} -r {transform} -threads {threads} ",
             shell=True,
         ).check_returncode()
     components = [str(tmppath / f"reslice{i}.nii.gz") for i in range(nframes)]
@@ -64,6 +66,7 @@ def reslice_4d(
     except subprocess.CalledProcessError:
         # Potential error due to slow I/O, wait a bit and retry.
         import time
+
         time.sleep(10)
         subprocess.run(
             f"fslmerge -t {outpath} {' '.join(components)}", shell=True
