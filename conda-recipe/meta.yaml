@@ -22,7 +22,9 @@ requirements:
   run:
     - python
     {% for dep in dependencies %}
+      {% if not dep.startswith('pymeshfix') %}
     - {{ dep | replace('>=', ' >=') | replace('<=', ' <=') | replace('==', ' ==') | replace('!=', ' !=') | replace('~=', ' ~=') | replace('>', ' >') | replace('<', ' <') }}
+      {% endif %}
     {% endfor %}
     {% for name, version_spec in pixidependencies.items() %}
     - {{ name }} {{ version_spec }}
