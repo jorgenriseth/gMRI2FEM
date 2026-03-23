@@ -2,6 +2,7 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import click
 import nibabel
@@ -75,7 +76,15 @@ def dcm2nii_mixed(
 
 def extract_mixed_dicom(dcmpath: Path, subvolumes: list[str]):
     dcm = pydicom.dcmread(dcmpath)
-    frames_total = int(dcm.NumberOfFrames)
+    try:
+        frames_total = int(dcm.NumberOfFrames)
+    except AttributeError:
+        EXPECTED_FRAMES = 2160  # 6 volumes * 360 frames per volume
+        warnings.warn(
+            f"File {dcmpath} not multi-frame, missing 'NumberOfFrames'\nAssuming {EXPECTED_FRAMES}"
+        )
+        frames_total = EXPECTED_FRAMES
+
     frames_per_volume = dcm[0x2001, 0x1018].value  # [Number of Slices MR]
     num_volumes = frames_total // frames_per_volume
     assert num_volumes * frames_per_volume == frames_total, (
@@ -158,8 +167,6 @@ def dicom_standard_affine(
     row_cosine = orientation[:3]
     col_cosine = orientation[3:]
     frame_cosine = np.cross(row_cosine, col_cosine)
-
-    # Create DICOM-definition affine map to LPS.
     T_1 = np.array(frame_fg.PlanePositionSequence[0].ImagePositionPatient)
 
     # Create DICOM-definition affine map to LPS.

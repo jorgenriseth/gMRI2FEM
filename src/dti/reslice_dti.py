@@ -80,6 +80,7 @@ def construct_and_save_tensor(
 @click.option("--suffix", type=str, default="")
 @click.option("--interp_mode", type=str, default="NN")
 @click.option("--greedyargs", type=str, default="-V 0")
+@click.option("--out_pattern", type=str)
 def reslice_dti(
     fixed: Path,
     dtidir: Path,

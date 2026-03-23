@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 import numpy as np
 import pydicom
+from pydicom.errors import InvalidDicomError
 import simple_mri as sm
 
 
@@ -17,12 +18,29 @@ def read_dicom_trigger_times(dicomfile):
     ]
     return np.unique(all_frame_times)
 
+def read_legacy_dicom_trigger_times(dicomfile):
+    dicomfile = Path(dicomfile)
+    unique_trigger_times = set()
+    possible_files = [p for p in dicomfile.parent.iterdir() if p.is_file()]
+    for f in sorted(possible_files):
+        try:
+            ds = pydicom.dcmread(f, stop_before_pixels=True)
+            unique_trigger_times.add(ds.TriggerTime)
+        except (InvalidDicomError, AttributeError) as e:
+            continue
+    trigger_times = sorted(unique_trigger_times)
+    if len(trigger_times) == 0:
+        raise ValueError(f"Couldn't find any DICOM file with TriggerTime in {dicomfile.parent}")
+    return trigger_times
+
 
 def dcm2nii_looklocker(dicomfile, outpath):
     outdir, form = outpath.parent, outpath.stem
     outdir.mkdir(exist_ok=True, parents=True)
-    times = read_dicom_trigger_times(dicomfile)
-    np.savetxt(f"{outdir}/{form}" + "_trigger_times.txt", times)
+    try:
+        times = read_dicom_trigger_times(dicomfile)
+    except AttributeError as e:
+        times = read_legacy_dicom_trigger_times(dicomfile)
 
     with tempfile.TemporaryDirectory(prefix=outpath.stem) as tmpdir:
         tmppath = Path(tmpdir)
@@ -36,6 +54,7 @@ def dcm2nii_looklocker(dicomfile, outpath):
         sm.save_mri(
             mri, outpath.with_suffix(".nii.gz"), dtype=np.single, intent_code=2001
         )
+        np.savetxt(f"{outdir}/{form}" + "_trigger_times.txt", times)
 
 
 @click.command()

@@ -1,4 +1,4 @@
-import re
+import time
 import subprocess
 import tempfile
 from pathlib import Path
@@ -65,8 +65,6 @@ def reslice_4d(
         ).check_returncode()
     except subprocess.CalledProcessError:
         # Potential error due to slow I/O, wait a bit and retry.
-        import time
-
         time.sleep(10)
         subprocess.run(
             f"fslmerge -t {outpath} {' '.join(components)}", shell=True
