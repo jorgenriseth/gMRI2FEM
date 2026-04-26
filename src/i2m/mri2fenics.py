@@ -14,7 +14,9 @@ from gmri2fem.utils import apply_affine, nan_filter_gaussian
 from i2m.vtk2mri import mri_data_to_ndarray
 
 
-def mri2fem_interpolate_quadrature(data_mri, V_target, quad_degree, mask=None):
+def mri2fem_interpolate_quadrature(
+    data_mri, V_target, quad_degree, mask=None, solver_type="direct"
+):
     datamask = np.isfinite(data_mri.data)
     if mask is not None:
         datamask *= mask
@@ -23,7 +25,13 @@ def mri2fem_interpolate_quadrature(data_mri, V_target, quad_degree, mask=None):
     quad_element = df.FiniteElement(
         "Quadrature", domain.ufl_cell(), degree=quad_degree, quad_scheme="default"
     )
-    Q = df.FunctionSpace(domain, quad_element)
+    try:
+        Q = df.FunctionSpace(domain, quad_element)
+    except ValueError:
+        raise RuntimeError(
+            f"Failed to create quad function space with quad_degree={quad_degree}"
+        )
+
     dof_img_coordinates = locate_dof_voxels(Q, data_mri, rint=False)
     dof_img_voxels = find_dof_nearest_neighbours(dof_img_coordinates, datamask, N=1)
 
@@ -35,11 +43,14 @@ def mri2fem_interpolate_quadrature(data_mri, V_target, quad_degree, mask=None):
     dx = df.Measure("dx", metadata={"quadrature_degree": quad_degree})
     u, v = df.TrialFunction(V_target), df.TestFunction(V_target)
     a = inner(u, v) * dx
-    L = inner(q, v) * dx
+    l = inner(q, v) * dx
     A = df.assemble(a)
-    b = df.assemble(L)
+    b = df.assemble(l)
     uh = df.Function(V_target)
-    df.solve(A, uh.vector(), b)
+    if solver_type == "direct":
+        df.solve(A, uh.vector(), b)
+    else:
+        df.solve(A, uh.vector(), b, "cg", "hypre_amg")
     return uh
 
 
