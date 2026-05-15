@@ -53,6 +53,8 @@ def mri_facemask(vol: np.ndarray, smoothing_level=5):
 
 
 def largest_island(mask: np.ndarray, connectivity: int = 1) -> np.ndarray:
+    if mask.sum() == 0:
+        raise ValueError("Mask is empty")
     newmask = skimage.measure.label(mask, connectivity=connectivity)
     regions = skimage.measure.regionprops(newmask)
     regions.sort(key=lambda x: x.num_pixels, reverse=True)
