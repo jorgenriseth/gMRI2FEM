@@ -8,8 +8,32 @@ import tqdm
 from simple_mri import SimpleMRI, load_mri, save_mri
 from loguru import logger
 
-from dti.utils import mri_number_of_frames
+from dti.utils import load_nibabel_spatial, mri_number_of_frames
 from gmri2fem.reslice_4d import reslice_4d
+
+
+def rotation_part(A: np.ndarray) -> np.ndarray:
+    """Orthogonal polar factor of a 3x3 matrix, i.e. A with scaling and shear removed."""
+    u, _, vt = np.linalg.svd(A)
+    return u @ vt
+
+
+def eigenvector_rotation(
+    moving_affine: np.ndarray, transform: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """Rotation taking FSL eigenvectors of the moving image to world coordinates of the fixed image.
+
+    FSL (dtifit) expresses vectors along the voxel axes of the moving image, with the first
+    axis flipped when the affine has a positive determinant. `transform` is the greedy matrix
+    that maps fixed world coordinates to moving world coordinates; only its rotation acts on
+    directions. Without a transform, the result is in the moving image's world coordinates.
+    """
+    R = rotation_part(moving_affine[:3, :3])
+    if np.linalg.det(moving_affine[:3, :3]) > 0:
+        R = R @ np.diag([-1.0, 1.0, 1.0])
+    if transform is None:
+        return R
+    return rotation_part(transform[:3, :3]).T @ R
 
 
 def construct_tensor_from_eigs(
@@ -110,6 +134,12 @@ def reslice_dti(
         )
 
     logger.info("Reslicing eigenvectors")
+    # The eigenvector components are resliced as scalar images, so they must also be rotated
+    # from the FSL voxel frame of the DTI into the world frame of the fixed image.
+    rotation = eigenvector_rotation(
+        load_nibabel_spatial(dtidir / f"{prefix_pattern}_V1.nii.gz").affine,
+        None if transform is None else np.loadtxt(transform),
+    )
     with tempfile.TemporaryDirectory(prefix=out_pattern) as tmpdir:
         tmppath = Path(tmpdir)
         for Vi in [f"V{i}" for i in range(1, 4)]:
@@ -128,6 +158,7 @@ def reslice_dti(
             resliced_mri = load_mri(resliced, dtype=np.single)
             norms = np.linalg.norm(resliced_mri.data, axis=-1, ord=2)
             resliced_mri.data[norms > 0] /= norms[norms > 0, np.newaxis]
+            resliced_mri.data = resliced_mri.data @ rotation.T
             save_mri(resliced_mri, outpath, dtype=np.single)
 
     logger.info("Reconstructing tensor from eigenvectors and -values")
