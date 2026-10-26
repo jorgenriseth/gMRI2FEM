@@ -4,7 +4,7 @@ import numpy as np
 import pantarei as pr
 import tqdm
 
-from glymphopt.utils import with_suffix
+from gmri2fem.utils import with_suffix
 
 df.parameters["refinement_algorithm"] = "plaza_with_parent_facets"
 
