@@ -2,6 +2,7 @@ import subprocess
 import nibabel
 from nibabel.spatialimages import SpatialImage
 from pathlib import Path
+from gmri2fem.external import require_commands
 
 
 def load_nibabel_spatial(input: str | Path) -> SpatialImage:
@@ -26,5 +27,6 @@ def path_stem(p: Path) -> str:
 
 
 def create_mask(input: Path, output: Path, threshold: float):
+    require_commands("bet")
     mask_cmd = f"bet {input} {output.parent / path_stem(output)} -m -f {threshold} -n"
     subprocess.run(mask_cmd, shell=True, check=True)

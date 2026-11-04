@@ -7,7 +7,7 @@ import scipy
 import tqdm
 from petsc4py import PETSc
 from dolfin import inner, grad
-from glymphopt.utils import with_suffix
+from gmri2fem.utils import with_suffix
 
 
 def scipy_sparse_csr_to_dolfin(A: scipy.sparse.csr_matrix) -> df.Matrix:

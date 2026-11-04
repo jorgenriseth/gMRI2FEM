@@ -5,6 +5,7 @@ from typing import Optional
 
 from dti.utils import create_mask, mri_number_of_frames
 from gmri2fem.utils import with_suffix
+from gmri2fem.external import require_commands
 
 
 def eddy_correct(
@@ -17,6 +18,7 @@ def eddy_correct(
     tmppath: Optional[Path] = None,
     verbose: bool = False,
 ):
+    require_commands("eddy", "bet")
     if tmppath is None:
         tmpdir = tempfile.TemporaryDirectory()
         tmppath = Path(tmpdir.name)
