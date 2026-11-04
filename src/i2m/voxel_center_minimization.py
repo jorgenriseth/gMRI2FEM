@@ -7,7 +7,7 @@ import numpy as np
 import scipy
 import tqdm
 from dolfin import inner, grad
-from glymphopt.utils import with_suffix
+from gmri2fem.utils import with_suffix
 
 
 def petsc_to_scipy(petsc_mat):
