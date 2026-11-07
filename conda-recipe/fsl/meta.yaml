@@ -1,0 +1,35 @@
+{% set policy = load_file_data(RECIPE_DIR ~ '/../fsl.toml') %}
+
+package:
+  name: {{ policy['package']['name'] }}
+  version: "{{ policy['package']['version'] }}"
+
+source:
+  path: ../../source
+
+build:
+  number: {{ policy['package']['build'] }}
+  noarch: generic
+
+requirements:
+  run:
+    - gmri2fem {{ policy['package']['gmri2fem'] }}
+    {% for name, constraint in policy['dependencies'].items() %}
+    - {{ name }} {{ constraint }}
+    {% endfor %}
+
+test:
+  source_files:
+    - tests/test_fsl.py
+  requires:
+    - pytest
+  commands:
+    - export FSLDIR="$PREFIX"
+    - export FSLOUTPUTTYPE=NIFTI_GZ
+    - python -m pytest -q tests/test_fsl.py
+
+about:
+  summary: Supported FSL runtime for gmri2fem
+  home: https://github.com/jorgenriseth/gMRI2FEM
+  license: MIT
+  license_file: LICENSE

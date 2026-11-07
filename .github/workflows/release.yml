@@ -1,0 +1,166 @@
+name: Build, test, and release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish tested artifacts (requires the matching release tag)
+        type: boolean
+        default: false
+      companion_only:
+        description: Only publish the FSL companion (tag fsl-vVERSION)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  python-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.83.0
+          environments: release
+          locked: true
+      - name: Validate release identity
+        if: github.event_name == 'release' || inputs.publish
+        env:
+          TAG: ${{ github.ref_name }}
+          COMPANION_ONLY: ${{ inputs.companion_only || startsWith(github.ref_name, 'fsl-v') }}
+        run: |
+          if [ "$COMPANION_ONLY" = "true" ]; then
+            pixi run -e release python -c 'import os,tomllib; p=tomllib.load(open("conda-recipe/fsl.toml","rb")); assert os.environ["TAG"] == "fsl-v"+p["package"]["version"]'
+          else
+            pixi run -e release python scripts/release.py check --tag "$TAG"
+          fi
+          test "${{ github.ref_type }}" = tag
+      - run: pixi run --locked -e release python -m pytest -q tests/test_release.py
+      - run: pixi run --locked -e release python scripts/release.py build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+          if-no-files-found: error
+
+  wheel-test:
+    needs: python-build
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install dist/*.whl pytest
+      - name: Test installed wheel without source-directory imports
+        run: |
+          cp tests/test_cli.py tests/test_concentration.py tests/test_reslice_dti.py "$RUNNER_TEMP/"
+          cd "$RUNNER_TEMP"
+          python -m pip check
+          python -c 'import importlib.util; assert importlib.util.find_spec("dolfin") is None'
+          python -m pytest -q test_cli.py test_concentration.py test_reslice_dti.py
+          gmri2fem --help
+          gmri2fem i2m --help
+
+  conda-build:
+    needs: python-build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.83.0
+          environments: release
+          locked: true
+      - name: Build and test Conda artifacts
+        env:
+          COMPANION_ONLY: ${{ inputs.companion_only || startsWith(github.ref_name, 'fsl-v') }}
+        run: |
+          if [ "$COMPANION_ONLY" = "true" ]; then
+            pixi run --locked -e release python scripts/release.py conda --sdist dist/*.tar.gz --companion-only
+          else
+            pixi run --locked -e release python scripts/release.py conda --sdist dist/*.tar.gz
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conda-dist
+          path: |
+            dist/conda/
+            dist/SHA256SUMS
+            dist/test-environments/
+          if-no-files-found: error
+
+  publish-pypi:
+    needs: [python-build, wheel-test, conda-build]
+    if: >-
+      (github.event_name == 'release' || inputs.publish) &&
+      !inputs.companion_only && !startsWith(github.ref_name, 'fsl-v')
+    runs-on: ubuntu-22.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: artifacts
+      - run: |
+          mkdir dist
+          cp artifacts/*.whl artifacts/*.tar.gz dist/
+          cd artifacts
+          sha256sum --check SHA256SUMS
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-conda:
+    needs: [python-build, wheel-test, conda-build]
+    if: github.event_name == 'release' || inputs.publish
+    runs-on: ubuntu-22.04
+    environment: anaconda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: conda-dist
+          path: dist
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.83.0
+          environments: release
+          locked: true
+      - name: Upload exact tested artifacts (library before companion)
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          cd dist
+          sha256sum --check SHA256SUMS
+          cd ..
+          shopt -s nullglob
+          for artifact in dist/conda/noarch/gmri2fem-[0-9]*.conda dist/conda/noarch/gmri2fem-[0-9]*.tar.bz2 dist/conda/noarch/gmri2fem-fsl-*.conda dist/conda/noarch/gmri2fem-fsl-*.tar.bz2; do
+            pixi run --locked -e release anaconda upload --user jorgenriseth "$artifact"
+          done

@@ -33,7 +33,7 @@ tar cvfz gmri2fem.tar.gz \
   scripts \ 
   snakeprofiles \ 
   singularity/{gmri2fem.sif,license.txt} \ 
-  environment.yml \ 
+  pixi.lock \
   pyproject.toml \ 
   sagamake.sh \ 
   Snakefile \ 

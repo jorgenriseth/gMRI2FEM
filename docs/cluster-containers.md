@@ -15,14 +15,14 @@ Filelist:
 - singularity/license.txt
 - Snakefile
 - snakeconfig.yaml
-- envionment.yml
+- pixi.lock
 - pyproject.toml
 - sagamake.sh
 - workflows_additional
 ```
 Send all necessary source files:
 ```bash
-rsync --info=progress2 -za --relative --mkpath gmri2fem scripts snakeprofiles singularity/{gmri2fem.sif,license.txt} environment.yml pyproject.toml sbatches/sagamake.sh Snakefile snakeconfig.yaml workflows_additional $GMRI2FEM_REMOTE_PATH
+rsync --info=progress2 -za --relative --mkpath gmri2fem scripts snakeprofiles singularity/{gmri2fem.sif,license.txt} pixi.lock pyproject.toml sbatches/sagamake.sh Snakefile snakeconfig.yaml workflows_additional $GMRI2FEM_REMOTE_PATH
 ```
 Decide which parts of the data are necessary to send, and send those along as well, using same command as above. Some that are easily forgotten 
 ```bash

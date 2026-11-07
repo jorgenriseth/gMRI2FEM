@@ -1,0 +1,16 @@
+[package]
+name = "gmri2fem-fsl"
+version = "0.1.0"
+build = 0
+gmri2fem = ">=0.3.1,<0.4"
+
+[dependencies]
+fsl-eddy = ">=2401.2,<2402"
+fsl-topup = ">=2203.5,<2204"
+fsl-fdt = ">=2202.11,<2203"
+fsl-bet2 = ">=2111.8,<2112"
+fsl-avwutils = "==2209.3"
+
+[activation]
+FSLDIR = "$CONDA_PREFIX"
+FSLOUTPUTTYPE = "NIFTI_GZ"

@@ -1,47 +1,61 @@
-{% set pyproject = load_file_data(RECIPE_DIR ~ '/../pyproject.toml') %}
-{% set project = pyproject['project'] %}
-{% set dependencies = project.get('dependencies', []) %}
-{% set pixidependencies = pyproject.get('tool', {}).get('pixi', {}).get('dependencies', {}) %}
+{% set project = load_file_data(RECIPE_DIR ~ '/../source/pyproject.toml')['project'] %}
+{% set deps = load_file_data(RECIPE_DIR ~ '/dependencies.toml') %}
 
 package:
-  name: {{ project['name'] | lower }}
+  name: {{ project['name'] }}
   version: "{{ project['version'] }}"
 
 source:
-  path: ../
+  path: ../source
 
 build:
+  number: 0
   noarch: python
-  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
+  script: "{{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv"
+  entry_points:
+    - gmri2fem = _cli:gmri2fem
 
 requirements:
   host:
-    - python {{ project.get('requires-python', '') }}
-    - setuptools
+    - python 3.11.*
+    - setuptools >=77.0.3
     - pip
   run:
-    - python
-    {% for dep in dependencies %}
-    - {{ dep | replace('>=', ' >=') | replace('<=', ' <=') | replace('==', ' ==') | replace('!=', ' !=') | replace('~=', ' ~=') | replace('>', ' >') | replace('<', ' <') }}
+    - python {{ project['requires-python'] }}
+    {% for requirement in project['dependencies'] %}
+    {% if requirement in deps.get('overrides', {}) %}
+    {% for translation in deps['overrides'][requirement] %}
+    - {{ translation }}
     {% endfor %}
-    {% for name, version_spec in pixidependencies.items() %}
-    - {{ name }} {{ version_spec }}
+    {% else %}
+    - {{ requirement | replace('>=', ' >=') }}
+    {% endif %}
     {% endfor %}
-  test:
-    imports:
-      - analysis
-      - brainmeshing
-      - dti
-      - gmri2fem
-      - i2m
-    commands:
-      - pip check
-      - gmri2fem --help
-    requires:
-      - pip
+    {% for name, constraint in deps['native'].items() %}
+    - {{ name }} {{ constraint }}
+    {% endfor %}
+
+test:
+  imports:
+    - _cli
+    - brainmeshing
+    - dti
+    - gmri2fem
+    - i2m
+  source_files:
+    - tests/test_cli.py
+    - tests/test_native_integration_smoke.py
+  commands:
+    - python -m pip check
+    - gmri2fem --help
+    - python -m pytest -q tests/test_cli.py tests/test_native_integration_smoke.py
+  requires:
+    - python 3.11.*
+    - pip
+    - pytest
 
 about:
-  summary: "{{ project.get('description', 'No summary provided.') }}"
-  home: "{{ project.get('urls', {}).get('Homepage', 'NO_HOMEPAGE_SET') }}"
+  summary: "{{ project['description'] }}"
+  home: "{{ project['urls']['Homepage'] }}"
   license: "{{ project['license'] }}"
-  license_file: ../LICENSE # Path to your license file in the project root
+  license_file: LICENSE

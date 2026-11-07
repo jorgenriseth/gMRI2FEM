@@ -1,33 +1,61 @@
 # gMRI2FEM
-`gmri2fem` is a python package for processing of human glymphatic MRI-images, i.e. contrast-enhanced brain images, with special focus on concentration-estimation and conversion into `dolfin` for mathematical modelling of brain tracer transport using the finite element method.
-The data functionality was developed for the MRI processing workflow for the GRIP-project. 
-The package both provide a library of useful functions as well as a CLI for processing different types of images.
 
+`gmri2fem` is a Python package and command-line interface for processing
+contrast-enhanced human brain MRI, estimating tracer concentrations, and
+mapping image data to finite-element meshes for mathematical modelling of
+brain tracer transport. The package was developed for MRI processing in the
+GRIP project.
 
 ## Installation
-### Dependencies
-`gmri2fem` has some python- and non-python dependencies which are not easily installable through `pip`:
-- FreeSurfer
-- greedy
-- FEniCS
-- SVMTK
 
-Instructions for how to install these may be found on their websites. 
-It is, however, possible to `gmri2fem` and run large portions of the pipeline whithout these dependencies.
-To install the python package gmri2fem, clone this repository and run 
+Choose the installation route based on the features you need.
+
+### Python-only functionality
+
+For concentration calculations and other Python functionality that does not
+need the native meshing stack or FSL:
+
 ```bash
-pip install . 
+python -m pip install gmri2fem
 ```
-from the root directory. 
-This will install the python packages and the CLI. 
 
+This installs the Python package and CLI, but not legacy FEniCS, SVMTK, FSL,
+Greedy, or FreeSurfer. Python-only releases target Python 3.11 and 3.12.
 
-## Example usage
-For a rough documentation on how to use the various exposed CLI-commands, we recommend looking at the Snakefiles for the Gonzo data pipeline at (https://github.com/jorgenriseth/gonzo).
-The CLI has several levels of subcommands.
-To run the main entrypoint:
+### Native meshing and FSL features
+
+Conda recipes for gmri2fem and its optional FSL companion are being prepared
+for publication. Until a validated release is available, this installation
+route is not yet available from the configured channels.
+
+Once published, use Pixi/Conda for features requiring legacy FEniCS
+(`dolfin`, not FEniCSx/`dolfinx`) and SVMTK. Install `gmri2fem-fsl` as well
+when you need FSL commands; it will install a compatible gmri2fem version.
+Greedy must be installed separately. FreeSurfer/FastSurfer setup and licenses
+are also managed separately.
+
+Managed native environments currently target Linux x86-64. A package version
+range does not guarantee numerical equivalence across different native stacks.
+
+### Gonzo pipeline
+
+Gonzo is a separate downstream MRI processing pipeline with its own
+environment and external-tool setup. See the
+[Gonzo repository](https://github.com/jorgenriseth/gonzo) and its documentation
+for installation and pipeline instructions; do not use this package's
+Python-only pip installation as a substitute for the Gonzo environment.
+
+## Usage
+
+The CLI has nested subcommands. Start by listing available commands:
+
 ```bash
-$ gmri2fem --help
+gmri2fem --help
+```
+
+Example output:
+
+```text
 Usage: gmri2fem [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -43,32 +71,42 @@ Commands:
   seg
 ```
 
-#### MRI
+To explore MRI commands and their options:
+
 ```bash
-Usage: gmri2fem mri [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  concentration
-  hybrid-t1map
-  looklocker-t1-postprocessing
-  looklocker-t1map
-  mixed-t1map
-  reslice4d
-  t1-to-r1
-  t1w-normalize
-  t1w-sigdiff
+gmri2fem mri --help
+gmri2fem mri looklocker-t1map --help
 ```
 
-Example command:
-```bash
-Usage: gmri2fem mri looklocker-t1map [OPTIONS]
+For example, `gmri2fem mri looklocker-t1map --help` describes the input,
+timestamps, and output options for that command.
 
-Options:
-  --input PATH       [required]
-  --timestamps PATH  [required]
-  --output PATH      [required]
-  --help             Show this message and exit.
+## Contributors and release maintainers
+
+Use Pixi **0.83.0** for development and release tasks:
+
+```bash
+pixi install --locked
+pixi run --locked test
 ```
+
+For release tooling and a local artifact rehearsal:
+
+```bash
+pixi install --locked -e release
+pixi run --locked -e release release-check
+pixi run --locked -e release release-build
+pixi run --locked -e release python scripts/release.py conda --sdist dist/gmri2fem-0.3.1.tar.gz
+```
+
+Use a clean artifact directory for each rehearsal. Release commands do not
+publish artifacts; Conda packages are assembled into a local channel under
+`dist/`. Wheel and Conda builds use the same staged source distribution.
+
+The legacy `environment.yml` has been retired. Use Pixi for this library and
+Gonzo's own environment for the full pipeline. `uv.lock` is a historical
+Python-only snapshot, not the supported native environment or release
+toolchain.
+
+See the [release guide](docs/releases.md) for publication gates, companion-only
+updates, artifact retries, and dependency policy.
