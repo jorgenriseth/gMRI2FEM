@@ -22,23 +22,11 @@ VTK retains Gonzo's tested cap below 9.4: PyVista 0.44 imports
 The Conda host and native test interpreter are deliberately Python 3.11;
 runtime metadata retains the project's broader Python range. The wheel is
 tested separately on both supported Python versions.
-The Conda runtime explicitly supplies `python-gmsh`: the current upstream
-panta-rhei recipe includes the Gmsh executable but not the Python distribution
-required by its wheel metadata. This is checked by `pip check`, not suppressed.
-
-### Current promotion blocker
-
-The retained PyVista/VTK/native stack resolves an older Gmsh binding whose
-Python distribution metadata is not discoverable by `importlib.metadata`.
-Consequently `pip check` still reports `panta-rhei requires gmsh` even when
-`python-gmsh` is installed. Newer binding packages with discoverable metadata
-conflict with this retained stack's shared-library constraints.
-
-Keep the strict failure: do not patch installed metadata, add an exception to
-the checker, or widen the scientific stack just to make publication pass.
-The planned future removal of panta-rhei, or a separately validated upstream
-packaging correction, must resolve this before promotion. Local build artifacts
-are rehearsal outputs, not approved releases.
+The FEniCS mesh/function HDF5 I/O formerly provided by panta-rhei lives in
+the bundled `fenics_io` package; panta-rhei (and its Gmsh requirement, which
+previously failed the strict `pip check` gate) is no longer a dependency.
+Keep `pip check` strict: do not patch installed metadata or add checker
+exceptions. Local build artifacts are rehearsal outputs, not approved releases.
 
 FSL utilities `fslroi`, `fslmerge`, and `fslmaths` are supplied by
 `fsl-avwutils`. Topup additionally requires its `b02b0.cnf` configuration.

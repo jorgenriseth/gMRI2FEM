@@ -2,7 +2,7 @@
 
 These are not a comprehensive feature suite. They cover representative
 interactions that package resolution and import checks cannot validate:
-FEniCS/panta-rhei HDF5 I/O, SVMTK surface creation, and SimpleMRI-to-FEniCS
+FEniCS HDF5 I/O (fenics_io), SVMTK surface creation, and SimpleMRI-to-FEniCS
 projection with both supported solver paths.
 """
 
@@ -11,8 +11,8 @@ import dolfin as df
 import SVMTK as svmtk
 
 
-def test_fenics_panta_rhei_hdf5_roundtrip_and_svmtk_surface(tmp_path):
-    from panta_rhei import Domain, read_domain, write_domain
+def test_fenics_io_hdf5_roundtrip_and_svmtk_surface(tmp_path):
+    from fenics_io import Domain, read_domain, write_domain
 
     mesh = df.UnitCubeMesh(2, 2, 2)
     domain = Domain(

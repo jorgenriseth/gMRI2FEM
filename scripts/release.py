@@ -121,7 +121,7 @@ def build():
     wheel, = dist.glob("*.whl")
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
-        required = {"_cli.py"} | {f"{name}/__init__.py" for name in ("gmri2fem", "i2m", "dti", "brainmeshing")}
+        required = {"_cli.py"} | {f"{name}/__init__.py" for name in ("gmri2fem", "i2m", "dti", "brainmeshing", "fenics_io")}
         if not required <= names:
             raise ValueError(f"Missing wheel payload: {required - names}")
     run(sys.executable, "-m", "twine", "check", *dist.glob("*.whl"), sdist)

@@ -1,5 +1,5 @@
 import click
-import panta_rhei as pr
+import fenics_io as fio
 import simple_mri as sm
 import dolfin as df
 import numpy as np
@@ -58,7 +58,7 @@ def create_evaluation_matrix(
 @click.option("--timestamps", type=click.Path(exists=True))
 def create_mesh_evaluation_data(mris, input, output, csfmask, timestamps: str):
     with df.HDF5File(df.MPI.comm_world, input, "r") as hdf:
-        mesh = pr.read_domain(hdf)
+        mesh = fio.read_domain(hdf)
     V = df.FunctionSpace(mesh, "CG", 1)
     data_mris = [sm.load_mri(p, dtype=np.single) for p in mris]
     if csfmask:

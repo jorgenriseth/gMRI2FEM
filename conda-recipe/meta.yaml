@@ -40,6 +40,7 @@ test:
     - _cli
     - brainmeshing
     - dti
+    - fenics_io
     - gmri2fem
     - i2m
   source_files:

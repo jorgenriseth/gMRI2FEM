@@ -4,7 +4,7 @@ import click
 import dolfin as df
 import meshio
 import numpy as np
-import panta_rhei as pr
+import fenics_io as fio
 import pyvista as pv
 
 
@@ -43,22 +43,22 @@ def cell_matrix_to_vtk_cells(cells: np.ndarray):
 
 def convert_to_vtk(hdf_data: Path, output: Path, ascii: bool = False):
     hdf = df.HDF5File(df.MPI.comm_world, str(hdf_data), "r")
-    domain = pr.read_domain(hdf)
-    concentration_times = pr.read_timevector(hdf, "concentration")
-    boundary_times = pr.read_timevector(hdf, "boundary_concentration")
+    domain = fio.read_domain(hdf)
+    concentration_times = fio.read_timevector(hdf, "concentration")
+    boundary_times = fio.read_timevector(hdf, "boundary_concentration")
     concentrations = [
-        pr.read_function(hdf, "concentration", domain, idx) for idx in range(5)
+        fio.read_function(hdf, "concentration", domain, idx) for idx in range(5)
     ]
     boundary_concentrations = [
-        pr.read_function(hdf, "boundary_concentration", domain, idx) for idx in range(5)
+        fio.read_function(hdf, "boundary_concentration", domain, idx) for idx in range(5)
     ]
-    dti = pr.read_function(hdf, "DTI", domain)
-    md = pr.read_function(hdf, "MD", domain)
-    fa = pr.read_function(hdf, "FA", domain)
+    dti = fio.read_function(hdf, "DTI", domain)
+    md = fio.read_function(hdf, "MD", domain)
+    fa = fio.read_function(hdf, "FA", domain)
 
     parcellations = df.MeshFunction("size_t", domain, 3)
     hdf.read(parcellations, "parcellations")
-    pr.close(hdf)
+    hdf.close()
 
     cells = cell_matrix_to_vtk_cells(domain.cells())
     celltypes = [pv.CellType.TETRA] * len(domain.cells())

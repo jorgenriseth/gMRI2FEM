@@ -8,7 +8,7 @@ import pyvista as pv
 import scipy
 import simple_mri as sm
 from dolfin import inner
-from panta_rhei import FenicsStorage
+from fenics_io import hdf_to_xdmf
 
 from gmri2fem.utils import apply_affine, nan_filter_gaussian
 from i2m.vtk2mri import mri_data_to_ndarray
@@ -149,6 +149,5 @@ def read_image(
 def fenicsstorage2xdmf(
     filepath, funcname: str, subnames: str | list[str], outputdir: Path
 ) -> None:
-    file = FenicsStorage(filepath, "r")
-    file.to_xdmf(funcname, subnames, outputdir)
-    file.close()
+    with df.HDF5File(df.MPI.comm_world, str(filepath), "r") as hdf:
+        hdf_to_xdmf(hdf, funcname, subnames, outputdir)

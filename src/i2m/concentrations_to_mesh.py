@@ -5,11 +5,10 @@ from typing import Optional
 import click
 import dolfin as df
 import numpy as np
-import panta_rhei as pr
+import fenics_io as fio
 import skimage
 import tqdm
 import simple_mri as sm
-from panta_rhei import FenicsStorage, fenicsstorage2xdmf
 from simple_mri import load_mri
 from loguru import logger
 
@@ -62,7 +61,7 @@ def map_concentration(
     )
 
     timestamps = np.maximum(0, find_timestamps(timetable, "looklocker", subject))
-    domain = pr.hdf2fenics(meshpath, pack=True)
+    domain = fio.read_domain(meshpath)
     V = df.FunctionSpace(domain, femfamily, femdegree)
 
     concentration_mri = load_mri(concentration_paths[0], dtype=np.single)
@@ -72,8 +71,8 @@ def map_concentration(
     assert len(concentration_paths) > 0
     assert len(timestamps) == len(concentration_paths)
 
-    outfile = FenicsStorage(str(output), "w")
-    outfile.write_domain(domain)
+    outfile = fio.open_hdf(output, "w")
+    fio.write_domain(outfile, domain)
     for ti, ci in zip(tqdm.tqdm(timestamps), concentration_paths):
         concentration_mri = load_mri(ci, dtype=np.single)
         valid_concentrations = np.isfinite(concentration_mri.data)
@@ -85,7 +84,7 @@ def map_concentration(
             dof_voxels,
             collocation_npoints,
         )
-        outfile.write_checkpoint(u_boundary, name="boundary_concentration", t=ti)
+        fio.write_checkpoint(outfile, u_boundary, name="boundary_concentration", t=ti)
 
         if collocation:
             dof_neighbours = find_dof_nearest_neighbours(
@@ -111,22 +110,23 @@ def map_concentration(
                     mask=(~csf_mask),
                     solver_type="iterative",
                 )
-        outfile.write_checkpoint(u_internal, name="concentration", t=ti)
+        fio.write_checkpoint(outfile, u_internal, name="concentration", t=ti)
     outfile.close()
 
     if visualdir is not None:
-        fenicsstorage2xdmf(
-            FenicsStorage(outfile.filepath, "r"),
-            "concentration",
-            "internal",
-            lambda _: visualdir / "concentrations_internal.xdmf",
-        )
-        fenicsstorage2xdmf(
-            FenicsStorage(outfile.filepath, "r"),
-            "boundary_concentration",
-            "boundary",
-            lambda _: visualdir / "concentrations_boundary.xdmf",
-        )
+        with df.HDF5File(df.MPI.comm_world, str(output), "r") as hdf:
+            fio.hdf_to_xdmf(
+                hdf,
+                "concentration",
+                "internal",
+                lambda _: Path(visualdir) / "concentrations_internal.xdmf",
+            )
+            fio.hdf_to_xdmf(
+                hdf,
+                "boundary_concentration",
+                "boundary",
+                lambda _: Path(visualdir) / "concentrations_boundary.xdmf",
+            )
 
 
 @click.command("boundary-concentrations")
@@ -147,7 +147,7 @@ def map_boundary_concentrations_cli(
     csf_mask = skimage.morphology.binary_erosion(
         csf_mask_mri.data, skimage.morphology.ball(1)
     )
-    domain = pr.hdf2fenics(mesh, pack=True)
+    domain = fio.read_domain(mesh)
     V = df.FunctionSpace(domain, "CG", 1)
 
     reference_mri = load_mri(mris[0], dtype=np.single)
@@ -171,10 +171,10 @@ def map_boundary_concentrations_cli(
             )
         )
     with df.HDF5File(domain.mpi_comm(), str(output), "w") as hdf:
-        pr.write_domain(hdf, domain)
-        pr.write_function(hdf, boundary_functions[0], "boundary_concentration")
+        fio.write_domain(hdf, domain)
+        fio.write_function(hdf, boundary_functions[0], "boundary_concentration")
         for ti, ui in zip(time[1:], boundary_functions[1:]):
-            pr.write_checkpoint(hdf, ui, name="boundary_concentration", t=float(ti))
+            fio.write_checkpoint(hdf, ui, name="boundary_concentration", t=float(ti))
 
 
 def map_boundary_concentration(
