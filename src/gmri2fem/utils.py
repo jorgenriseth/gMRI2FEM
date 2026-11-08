@@ -65,7 +65,7 @@ def grow_restricted(grow, restriction, growth_radius):
     return (
         grow
         + skimage.morphology.binary_dilation(
-            grow, skimage.morphology.cube(2 * growth_radius + 1)
+            grow, skimage.morphology.footprint_rectangle((2 * growth_radius + 1,) * 3)
         )
         * restriction
     )

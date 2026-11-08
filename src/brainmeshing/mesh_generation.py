@@ -219,7 +219,7 @@ def extract_subcortical_gm(
     )
     subcortical_gm = binary_image_surface_extraction(
         skimage.morphology.binary_dilation(
-            subcortical_gm_mask, skimage.morphology.cube(3)
+            subcortical_gm_mask, skimage.morphology.footprint_rectangle((3, 3, 3))
         ),
         sigma=binary_smoothing,
         cutoff=1 / 2,

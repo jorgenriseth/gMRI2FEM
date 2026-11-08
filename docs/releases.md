@@ -25,6 +25,8 @@ tested separately on both supported Python versions.
 The FEniCS mesh/function HDF5 I/O formerly provided by panta-rhei lives in
 the bundled `fenics_io` package; panta-rhei (and its Gmsh requirement, which
 previously failed the strict `pip check` gate) is no longer a dependency.
+`h5py` is declared directly because meshio's XDMF I/O, used for mesh
+conversion, requires it; it was previously only inherited from panta-rhei.
 Keep `pip check` strict: do not patch installed metadata or add checker
 exceptions. Local build artifacts are rehearsal outputs, not approved releases.
 
