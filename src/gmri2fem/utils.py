@@ -234,5 +234,6 @@ def prepend_info(df, **kwargs):
     return df[[*df.columns[-nargs:], *df.columns[:-nargs]]]
 
 
-def with_suffix(p: Path, newsuffix: str) -> Path:
+def with_suffix(p: Path | str, newsuffix: str) -> Path:
+    p = Path(p)
     return p.parent / f"{p.name.split('.')[0]}{newsuffix}"

@@ -8,6 +8,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
+  "h5py",
   "loguru",
   "matplotlib",
   "meshio",
@@ -16,8 +17,8 @@ dependencies = [
   "pandas",
   "pint",
   "pydicom",
-  "pymeshfix",
-  "scikit-image",
+  "pymeshfix>=0.17.1,<0.18",
+  "scikit-image>=0.25",
   "scipy",
   "tqdm",
   "simple-mri>=0.1.6",
@@ -62,7 +63,7 @@ release-conda = "python scripts/release.py conda"
 
 [tool.pixi.dependencies]
 fenics = ">=2019.2.0.dev20240219,<2020"
-svmtk = ">=1.3.0"
+svmtk = ">=2.0.1,<3"
 h5py = ">=3,<4"
 
 [tool.pixi.feature.test.dependencies]
