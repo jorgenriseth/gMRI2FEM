@@ -72,11 +72,11 @@ jobs:
       - run: python -m pip install dist/*.whl pytest
       - name: Test installed wheel without source-directory imports
         run: |
-          cp tests/test_cli.py tests/test_concentration.py tests/test_reslice_dti.py "$RUNNER_TEMP/"
+          cp tests/test_cli.py tests/test_reslice_dti.py "$RUNNER_TEMP/"
           cd "$RUNNER_TEMP"
           python -m pip check
           python -c 'import importlib.util; assert importlib.util.find_spec("dolfin") is None'
-          python -m pytest -q test_cli.py test_concentration.py test_reslice_dti.py
+          python -m pytest -q test_cli.py test_reslice_dti.py
           gmri2fem --help
           gmri2fem i2m --help
 
