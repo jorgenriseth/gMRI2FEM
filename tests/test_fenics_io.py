@@ -164,6 +164,10 @@ def test_mesh2xdmf_xdmf2hdf(tmp_path):
 
 def test_meshio2xdmf_without_tags(tmp_path):
     xdmfdir = tmp_path / "xdmfs"
+    fio.meshio2xdmf(_medit_mesh(tagged=True), xdmfdir, dim=3)
+    assert (xdmfdir / "subdomains.xdmf").exists()
+    assert (xdmfdir / "boundaries.xdmf").exists()
+
     fio.meshio2xdmf(_medit_mesh(tagged=False), xdmfdir, dim=3)
     assert (xdmfdir / "mesh.xdmf").exists()
     assert not (xdmfdir / "subdomains.xdmf").exists()

@@ -37,9 +37,8 @@ def meshio2xdmf(mesh: meshio.Mesh, xdmfdir: StrPath, dim: int) -> Path:
     meshio.write(xdmfdir / "mesh.xdmf", meshio.Mesh(points, polytopes))
 
     tag_key = next((key for key in _TAG_KEYS if key in mesh.cell_data_dict), None)
-    if tag_key is None:
-        return xdmfdir
-    tags = mesh.cell_data_dict[tag_key]
+    tags = mesh.cell_data_dict[tag_key] if tag_key is not None else {}
+    written_tag_files = set()
 
     if polytope_label in tags:
         subdomains = {"subdomains": [tags[polytope_label]]}
@@ -47,6 +46,7 @@ def meshio2xdmf(mesh: meshio.Mesh, xdmfdir: StrPath, dim: int) -> Path:
             xdmfdir / "subdomains.xdmf",
             meshio.Mesh(points, polytopes, cell_data=subdomains),
         )
+        written_tag_files.add("subdomains.xdmf")
     if facet_label in tags and facet_label in mesh.cells_dict:
         facets = {facet_label: mesh.cells_dict[facet_label]}
         boundaries = {"boundaries": [tags[facet_label]]}
@@ -54,6 +54,11 @@ def meshio2xdmf(mesh: meshio.Mesh, xdmfdir: StrPath, dim: int) -> Path:
             xdmfdir / "boundaries.xdmf",
             meshio.Mesh(points, facets, cell_data=boundaries),
         )
+        written_tag_files.add("boundaries.xdmf")
+
+    for filename in ("subdomains.xdmf", "boundaries.xdmf"):
+        if filename not in written_tag_files:
+            (xdmfdir / filename).unlink(missing_ok=True)
     return xdmfdir
 
 
