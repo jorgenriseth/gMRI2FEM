@@ -6,6 +6,7 @@ from typing import Optional
 
 from dti.utils import create_mask
 from gmri2fem.utils import with_suffix
+from gmri2fem.external import require_commands
 
 
 def dtifit(
@@ -14,6 +15,7 @@ def dtifit(
     output: Path,
     tmppath: Optional[Path] = None,
 ):
+    require_commands("fslroi", "fslmaths", "bet", "dtifit")
     if tmppath is None:
         tmpdir = tempfile.TemporaryDirectory()
         tmppath = Path(tmpdir.name)

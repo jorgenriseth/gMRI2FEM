@@ -13,6 +13,19 @@ class LazyGroup(click.Group):
         lazy = sorted(self.lazy_subcommands.keys())
         return base + lazy
 
+    def format_commands(self, ctx, formatter):
+        rows = []
+        for name in sorted(set(self.list_commands(ctx))):
+            if name in self.lazy_subcommands:
+                rows.append((name, ""))
+            else:
+                command = super().get_command(ctx, name)
+                if command is not None and not command.hidden:
+                    rows.append((name, command.get_short_help_str()))
+        if rows:
+            with formatter.section("Commands"):
+                formatter.write_dl(rows)
+
     def get_command(self, ctx, cmd_name):
         if cmd_name in self.lazy_subcommands:
             return self._lazy_load(cmd_name)
@@ -21,7 +34,16 @@ class LazyGroup(click.Group):
     def _lazy_load(self, cmd_name):
         import_path = self.lazy_subcommands[cmd_name]
         modname, cmd_object_name = import_path.rsplit(".", 1)
-        mod = importlib.import_module(modname)
+        try:
+            mod = importlib.import_module(modname)
+        except ModuleNotFoundError as error:
+            if error.name not in {"dolfin", "SVMTK", "petsc4py"}:
+                raise
+            raise click.ClickException(
+                f"This command requires {error.name}. Install gmri2fem through "
+                "Conda/Pixi with the native stack; see "
+                "https://github.com/jorgenriseth/gMRI2FEM#installation."
+            ) from error
         cmd_object = getattr(mod, cmd_object_name)
         if not isinstance(cmd_object, click.BaseCommand):
             raise ValueError(

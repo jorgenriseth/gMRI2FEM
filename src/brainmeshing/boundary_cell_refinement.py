@@ -1,10 +1,10 @@
 import click
 import dolfin as df
 import numpy as np
-import pantarei as pr
+import fenics_io as fio
 import tqdm
 
-from glymphopt.utils import with_suffix
+from gmri2fem.utils import with_suffix
 
 df.parameters["refinement_algorithm"] = "plaza_with_parent_facets"
 
@@ -16,11 +16,11 @@ df.parameters["refinement_algorithm"] = "plaza_with_parent_facets"
 @click.option("--maxiter", type=int, default=5)
 def refine_mesh_cli(input, output, threshold, maxiter):
     with df.HDF5File(df.MPI.comm_world, input, "r") as hdf:
-        domain = pr.read_domain(hdf)
+        domain = fio.read_domain(hdf)
     refined_domain = refine_mesh(domain, threshold, max_iter=maxiter)
 
     with df.HDF5File(df.MPI.comm_world, output, "w") as hdf:
-        pr.write_domain(hdf, refined_domain)
+        fio.write_domain(hdf, refined_domain)
 
     with df.XDMFFile(
         df.MPI.comm_world, str(with_suffix(output, "_subdomains.xdmf"))
@@ -84,7 +84,7 @@ def refine_mesh(domain, threshold, max_iter=5):
 
     newfacets = init_boundaries.array() > len(init_boundaries.array())
     init_boundaries.array()[np.argwhere(newfacets)] = 0
-    return pr.Domain(
+    return fio.Domain(
         init_mesh,
         init_subdomains,
         init_boundaries,

@@ -7,6 +7,7 @@ from typing import Optional
 import click
 
 from dti.utils import mri_number_of_frames
+from gmri2fem.external import require_commands
 
 
 # TODO: Incorporate to allow multiple files resliced simultaneously
@@ -38,6 +39,7 @@ def reslice_4d(
     interp_mode: str = "NN",
     greedyargs: Optional[str] = None,
 ) -> Path:
+    require_commands("fslroi", "fslmerge", "greedy")
     if transform is None:
         transform = Path("")
     if tmppath is None:

@@ -65,7 +65,7 @@ def grow_restricted(grow, restriction, growth_radius):
     return (
         grow
         + skimage.morphology.binary_dilation(
-            grow, skimage.morphology.cube(2 * growth_radius + 1)
+            grow, skimage.morphology.footprint_rectangle((2 * growth_radius + 1,) * 3)
         )
         * restriction
     )
@@ -234,5 +234,6 @@ def prepend_info(df, **kwargs):
     return df[[*df.columns[-nargs:], *df.columns[:-nargs]]]
 
 
-def with_suffix(p: Path, newsuffix: str) -> Path:
+def with_suffix(p: Path | str, newsuffix: str) -> Path:
+    p = Path(p)
     return p.parent / f"{p.name.split('.')[0]}{newsuffix}"

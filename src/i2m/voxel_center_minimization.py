@@ -1,13 +1,13 @@
 from typing import Optional
 import click
-import panta_rhei as pr
+import fenics_io as fio
 import simple_mri as sm
 import dolfin as df
 import numpy as np
 import scipy
 import tqdm
 from dolfin import inner, grad
-from glymphopt.utils import with_suffix
+from gmri2fem.utils import with_suffix
 
 
 def petsc_to_scipy(petsc_mat):
@@ -81,18 +81,10 @@ def map_evaluation_data_to_mesh(
     visual: bool = True,
 ):
     with df.HDF5File(df.MPI.comm_world, mesh, "r") as hdf:
-        mesh = pr.read_domain(hdf)
+        mesh = fio.read_domain(hdf)
 
     npzfile = np.load(eval)
     M = reconstruct_evaluation_matrix(npzfile)
-    # scipy.sparse.csr_matrix(
-    #     (
-    #         npzfile["matrix_data"],
-    #         npzfile["matrix_indices"],
-    #         npzfile["matrix_indptr"],
-    #     ),
-    #     shape=npzfile["matrix_shape"],
-    # )
     C = [npzfile[label] for idx in range(5) if (label := f"vector{idx}") in npzfile]
     assert len(C) > 0, f"No vector data found in {eval}"
 
@@ -112,9 +104,9 @@ def map_evaluation_data_to_mesh(
     U = map_mri_to_mesh(C, V, M, verbose)
 
     with df.HDF5File(df.MPI.comm_world, output, "w") as hdf:
-        pr.write_domain(hdf, mesh)
+        fio.write_domain(hdf, mesh)
         for t, u in zip(time, U):
-            pr.write_checkpoint(hdf, u, str(u.name()), t=t)
+            fio.write_checkpoint(hdf, u, str(u.name()), t=t)
 
     if visual:
         with df.XDMFFile(df.MPI.comm_world, str(with_suffix(output, ".xdmf"))) as xdmf:

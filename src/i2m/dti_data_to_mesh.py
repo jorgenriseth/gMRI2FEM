@@ -28,7 +28,7 @@ from pathlib import Path
 import click
 import dolfin as df
 import numpy as np
-import panta_rhei as pr
+import fenics_io as fio
 import simple_mri as sm
 
 from dti.clean_dti_data import extend_to_9_component_array
@@ -65,7 +65,7 @@ def adjusting_mean_diffusivity(Dvector: np.ndarray, subdomains, tags_with_limits
 
 
 def dti_data_to_mesh(
-    domain: pr.Domain,
+    domain: fio.Domain,
     dti_mri: sm.SimpleMRI,
     md_mri: sm.SimpleMRI,
     fa_mri: sm.SimpleMRI,
@@ -96,10 +96,10 @@ def dti_data_to_mesh(
     FA.vector()[:] = np.median(fa_mri.data[*dof_N_neighbours], axis=0)
 
     hdf = df.HDF5File(domain.mpi_comm(), str(output), "w")
-    pr.write_domain(hdf, domain)
-    pr.write_function(hdf, D, "DTI")
-    pr.write_function(hdf, MD, "MD")
-    pr.write_function(hdf, FA, "FA")
+    fio.write_domain(hdf, domain)
+    fio.write_function(hdf, D, "DTI")
+    fio.write_function(hdf, MD, "MD")
+    fio.write_function(hdf, FA, "FA")
     hdf.close()
 
 
@@ -117,7 +117,7 @@ def dti2mesh(mesh: Path, dti: Path, md: Path, fa: Path, mask: Path, output: Path
     mask_mri = sm.load_mri(mask, dtype=bool)
 
     hdf = df.HDF5File(df.MPI.comm_world, str(mesh), "r")
-    domain = pr.read_domain(hdf)
+    domain = fio.read_domain(hdf)
     hdf.close()
     dti_data_to_mesh(domain, dti_mri, md_mri, fa_mri, mask_mri.data, output)
 

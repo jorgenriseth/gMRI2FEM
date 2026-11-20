@@ -7,9 +7,11 @@ from typing import Optional
 
 from dti.utils import mri_number_of_frames
 from gmri2fem.utils import with_suffix
+from gmri2fem.external import require_commands
 
 
 def topup(dti, topup_b0, outputdir: Path, tmppath: Optional[Path] = None):
+    require_commands("fslroi", "fslmerge", "topup")
     if tmppath is None:
         tmpdir = tempfile.TemporaryDirectory()
         tmppath = Path(tmpdir.name)
