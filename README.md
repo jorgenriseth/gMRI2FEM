@@ -95,6 +95,7 @@ For release tooling and a local artifact rehearsal:
 ```bash
 pixi install --locked -e release
 pixi run --locked -e release release-check
+pixi run --locked -e release python -m pytest -q tests/test_release.py
 pixi run --locked -e release release-build
 pixi run --locked -e release python scripts/release.py conda --sdist dist/gmri2fem-0.3.1.tar.gz
 ```
@@ -102,11 +103,18 @@ pixi run --locked -e release python scripts/release.py conda --sdist dist/gmri2f
 Use a clean artifact directory for each rehearsal. Release commands do not
 publish artifacts; Conda packages are assembled into a local channel under
 `dist/`. Wheel and Conda builds use the same staged source distribution.
+Publishing is handled by the [release workflow](.github/workflows/release.yml):
+pull requests, pushes to `main`, and default manual runs build and test only.
+Publication requires a published GitHub release or explicit manual opt-in, a
+matching tag, and successful artifact tests. The workflow uploads the tested
+artifacts through the `pypi` and `anaconda` environments. Configure PyPI
+trusted publishing and environment approval, and set `ANACONDA_TOKEN` for
+Anaconda publication. For an FSL companion-only update, use an `fsl-vVERSION`
+tag and enable `companion_only`; this publishes the companion without
+publishing Python artifacts. If an upload partially fails, retry only missing
+artifacts after checking their checksums; do not overwrite a published version.
 
 The legacy `environment.yml` has been retired. Use Pixi for this library and
 Gonzo's own environment for the full pipeline. `uv.lock` is a historical
 Python-only snapshot, not the supported native environment or release
 toolchain.
-
-See the [release guide](docs/releases.md) for publication gates, companion-only
-updates, artifact retries, and dependency policy.
