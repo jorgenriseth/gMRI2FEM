@@ -50,6 +50,11 @@ def test_open_hdf_append_creates_missing_file(tmp_path):
     assert path.exists()
 
 
+def test_read_signature_supports_cell_constructor():
+    element = fio.io._read_signature("FiniteElement('CG', Cell('triangle'), 1)")
+    assert element == df.FiniteElement("CG", df.triangle, 1)
+
+
 @pytest.mark.parametrize(
     "make_space",
     [
@@ -95,9 +100,18 @@ def test_function_checkpoint_roundtrip(tmp_path, make_space):
         assert np.allclose(u2.vector().get_local(), values[2])
 
 
-def test_read_signature_rejects_arbitrary_code():
-    with pytest.raises(NameError):
-        fio.io._read_signature("__import__('os')")
+@pytest.mark.parametrize(
+    "signature",
+    [
+        "__import__('os')",
+        "FiniteElement.__class__",
+        "FiniteElement('CG', triangle, [x for x in ()])",
+        "FiniteElement('CG', triangle, 1 + 1)",
+    ],
+)
+def test_read_signature_rejects_executable_expressions(signature):
+    with pytest.raises(ValueError):
+        fio.io._read_signature(signature)
 
 
 def test_hdf_to_xdmf(tmp_path):

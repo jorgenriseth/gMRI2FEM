@@ -6,6 +6,7 @@ File layout:
     "signature" and "count" on /<name>, as written by dolfin.HDF5File.
 """
 
+import ast
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -158,21 +159,80 @@ def _flat(pool) -> list[str]:
 
 
 def _read_signature(signature: str) -> ufl_legacy.FiniteElementBase:
-    """Reconstruct a ufl element from its signature, evaluated in a namespace
-    restricted to element and cell constructors."""
+    """Reconstruct a UFL element from DOLFIN's serialized element signature."""
     from ufl_legacy import Cell
 
-    namespace = {
-        "__builtins__": {},
+    elements = {
         "FiniteElement": df.FiniteElement,
         "MixedElement": df.MixedElement,
         "TensorElement": df.TensorElement,
         "VectorElement": df.VectorElement,
+    }
+    constructors = {
+        **elements,
         "Cell": Cell,
+    }
+    cells = {
         "interval": df.interval,
         "triangle": df.triangle,
         "tetrahedron": df.tetrahedron,
         "quadrilateral": df.quadrilateral,
         "hexahedron": df.hexahedron,
     }
-    return eval(signature, namespace)
+
+    try:
+        expression = ast.parse(signature, mode="eval").body
+    except SyntaxError as exc:
+        raise ValueError("Invalid UFL element signature") from exc
+
+    if (
+        not isinstance(expression, ast.Call)
+        or not isinstance(expression.func, ast.Name)
+        or expression.func.id not in elements
+    ):
+        raise ValueError("Signature must call a supported UFL element constructor")
+
+    def parse_value(node: ast.expr):
+        if isinstance(node, ast.Constant):
+            if node.value is None or type(node.value) in (
+                str,
+                int,
+                float,
+                bool,
+            ):
+                return node.value
+        elif isinstance(node, ast.Name) and node.id in cells:
+            return cells[node.id]
+        elif isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name) or node.func.id not in constructors:
+                raise ValueError("Unsupported constructor in UFL element signature")
+            if any(isinstance(arg, ast.Starred) for arg in node.args):
+                raise ValueError("Starred arguments are not allowed in UFL signatures")
+            if any(keyword.arg is None for keyword in node.keywords):
+                raise ValueError("Expanded keyword arguments are not allowed in UFL signatures")
+            args = [parse_value(arg) for arg in node.args]
+            kwargs = {
+                keyword.arg: parse_value(keyword.value) for keyword in node.keywords
+            }
+            return constructors[node.func.id](*args, **kwargs)
+        elif isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            values = [parse_value(item) for item in node.elts]
+            if isinstance(node, ast.List):
+                return values
+            if isinstance(node, ast.Tuple):
+                return tuple(values)
+            return set(values)
+        elif isinstance(node, ast.Dict):
+            if any(key is None for key in node.keys):
+                raise ValueError("Dictionary unpacking is not allowed in UFL signatures")
+            return {
+                parse_value(key): parse_value(value)
+                for key, value in zip(node.keys, node.values)
+            }
+        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            value = parse_value(node.operand)
+            if type(value) in (int, float):
+                return value if isinstance(node.op, ast.UAdd) else -value
+        raise ValueError("Unsupported expression in UFL element signature")
+
+    return parse_value(expression)
